@@ -1,3 +1,6 @@
+#-------------------------------
+# import modules
+#-------------------------------
 from pygame.draw import rect
 import ChessEngine
 import pygame as p
