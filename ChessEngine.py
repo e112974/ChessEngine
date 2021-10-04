@@ -19,6 +19,7 @@ class GameState():
         self.blackKingLocation = (0,4)
         self.checkMate = False
         self.staleMate = False
+        self.enpassantPossible = ()
 
     def makeMove(self,move):
         self.board[move.startRow][move.startCol] = "--"
@@ -29,6 +30,20 @@ class GameState():
             self.whiteKingLocation = (move.endRow,move.endCol)
         elif move.pieceMoved == 'B_K':
             self.blackKingLocation = (move.endRow,move.endCol)
+            
+        # pawn promotion
+        if move.isPawnPromotion:
+            self.board[move.endRow][move.endCol] = move.pieceMoved[0] + '_Q'
+            
+        # enpassant move
+        if move.isEnpassantMove:
+            self.board[move.startRow][move.endCol] = '--'
+            
+        # update enpassantPossible variable
+        if move.pieceMoved[2] == 'P' and abs(move.startRow - move.endRow) == 2:
+            self.enpassantPossible = ((move.startRow + move.endRow)//2,move.startCol)
+        else:
+            self.enpassantPossible = ()
 
     def undoMove(self):
         if len(self.moveLog) != 0:
@@ -40,8 +55,17 @@ class GameState():
                 self.whiteKingLocation = (move.startRow,move.startCol)
             elif move.pieceMoved == 'B_K':
                 self.blackKingLocation = (move.startRow,move.startCol)
+            # undo enpassantMove
+            if move.isEnpassantMove:
+                self.board[move.endRow][move.endCol] = '--'
+                self.board[move.startRow][move.endCol] = move.pieceCaptured
+                self.enpassantPossible = (move.endRow,move.endCol)
+            # undo a 2 square pawn advance
+            if move.pieceMoved[2] == 'P' and abs(move.startRow - move.endRow) == 2:
+                self.enpassantPossible = ()
 
     def getValidMoves(self):
+        tempEnpassantPossible = self.enpassantPossible
         # 1. first generate all the moves
         moves = self.getAllPossibleMoves()
         # 2. make the move
@@ -62,6 +86,9 @@ class GameState():
         else:
             self.checkMate = False
             self.staleMate = False
+            
+        self.enpassantPossible = tempEnpassantPossible
+        
         return moves
 
     def inCheck(self):
@@ -79,7 +106,6 @@ class GameState():
                 return True
         return False
 
-
     def getAllPossibleMoves(self):
         moves = []
         for r in range(len(self.board)):
@@ -89,7 +115,6 @@ class GameState():
                     piece = self.board[r][c][2]
                     self.moveFunctions[piece](r,c,moves)
         return moves
-
 
     def getPawnMoves(self,r,c,moves):
         # -----------------------        
@@ -103,9 +128,13 @@ class GameState():
             if c-1 >= 0:
                 if self.board[r-1][c-1][0] == 'B':
                     moves.append(Move((r,c),(r-1,c-1),self.board))
+                elif (r-1,c-1) == self.enpassantPossible:
+                    moves.append(Move((r,c),(r-1,c-1),self.board,isEnpassantMove = True))
             if c+1 <= 7:
                 if self.board[r-1][c+1][0] == 'B':
                     moves.append(Move((r,c),(r-1,c+1),self.board))
+                elif (r-1,c+1) == self.enpassantPossible:
+                    moves.append(Move((r,c),(r-1,c+1),self.board,isEnpassantMove = True))
         # -----------------------        
         # Moves for BLACK PAWNS
         # -----------------------
@@ -117,10 +146,14 @@ class GameState():
             if c-1 >= 0:
                 if self.board[r+1][c-1][0] == 'W':
                     moves.append(Move((r,c),(r+1,c-1),self.board))
+                elif (r+1,c-1) == self.enpassantPossible:
+                    moves.append(Move((r,c),(r+1,c-1),self.board,isEnpassantMove = True))
             if c+1 <= 7:
                 if self.board[r+1][c+1][0] == 'W':
                     moves.append(Move((r,c),(r+1,c+1),self.board))
-
+                elif (r+1,c+1) == self.enpassantPossible:
+                    moves.append(Move((r,c),(r+1,c+1),self.board,isEnpassantMove = True))
+                    
     def getKnightMoves(self,r,c,moves):
         # -----------------------        
         # Moves for WHITE KNIGHT
@@ -622,13 +655,18 @@ class Move():
                    'e':4, 'f':5, 'g':6, 'h':7}
     colsToFiles = {v: k for k, v in filesToCols.items()}
 
-    def __init__(self, startSq, endSq, board):
+    def __init__(self, startSq, endSq, board, isEnpassantMove = False):
         self.startRow = startSq[0]
         self.startCol = startSq[1]
         self.endRow   = endSq[0]
         self.endCol   = endSq[1]
         self.pieceMoved = board[self.startRow][self.startCol]
         self.pieceCaptured = board[self.endRow][self.endCol]
+        self.isPawnPromotion = (self.pieceMoved == 'W_P' and self.endRow == 0) or (self.pieceMoved == 'B_P' and self.endRow == 7)
+        self.isEnpassantMove = isEnpassantMove
+        if self.isEnpassantMove:
+            self.pieceCaptured = 'W_P' if self.pieceMoved == 'B_P' else 'B_P'
+        
         self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol
 
     def __eq__(self, other):
