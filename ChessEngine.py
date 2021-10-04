@@ -5,7 +5,7 @@ class GameState():
             ["B_P","B_P","B_P","B_P","B_P","B_P","B_P","B_P"],
             ["--", "--", "--", "--", "--", "--", "--", "--"],
             ["--", "--", "--", "--", "--", "--", "--", "--"],
-            ["--", "--", "--", "W_B", "--", "--", "--", "--"],
+            ["--", "--", "--", "--", "--", "--", "--", "--"],
             ["--", "--", "--", "--", "--", "--", "--", "--"],
             ["W_P","W_P","W_P","W_P","W_P","W_P","W_P","W_P"],
             ["W_R","W_N","W_B","W_K","W_Q","W_B","W_N","W_R"],
@@ -15,22 +15,70 @@ class GameState():
                               'K': self.getKingMoves,   'Q': self.getQueenMoves}
         self.WhiteToMove = True
         self.moveLog = []
+        self.whiteKingLocation = (7,4)
+        self.blackKingLocation = (0,4)
+        self.checkMate = False
+        self.staleMate = False
 
     def makeMove(self,move):
         self.board[move.startRow][move.startCol] = "--"
         self.board[move.endRow][move.endCol] = move.pieceMoved
         self.moveLog.append(move)
         self.WhiteToMove = not self.WhiteToMove
+        if move.pieceMoved == 'W_K':
+            self.whiteKingLocation = (move.endRow,move.endCol)
+        elif move.pieceMoved == 'B_K':
+            self.blackKingLocation = (move.endRow,move.endCol)
 
     def undoMove(self):
         if len(self.moveLog) != 0:
             move = self.moveLog.pop()
             self.board[move.startRow][move.startCol] = move.pieceMoved
-            self.board[move.endRow][move.endRow] = move.pieceCaptured
+            self.board[move.endRow][move.endCol] = move.pieceCaptured
             self.WhiteToMove = not self.WhiteToMove
+            if move.pieceMoved == 'W_K':
+                self.whiteKingLocation = (move.startRow,move.startCol)
+            elif move.pieceMoved == 'B_K':
+                self.blackKingLocation = (move.startRow,move.startCol)
 
     def getValidMoves(self):
-        return self.getAllPossibleMoves()
+        # 1. first generate all the moves
+        moves = self.getAllPossibleMoves()
+        # 2. make the move
+        for i in range(len(moves)-1,-1,-1):  # when removing from list, go backwards in indices
+            self.makeMove(moves[i])
+        # 3. make the opponents move
+            # we need to switch turns here makemove function will switch turns anyway
+            self.WhiteToMove = not self.WhiteToMove
+            if self.inCheck(): # 4. for each opponent move, check if king is attacked
+                moves.remove(moves[i]) # if the king is attacked, not a valid move
+            self.WhiteToMove = not self.WhiteToMove
+            self.undoMove()
+        if len(moves) == 0:   # either checkmate or stalemate
+            if self.inCheck():
+                self.checkMate = True
+            else: 
+                self.staleMate = True
+        else:
+            self.checkMate = False
+            self.staleMate = False
+        return moves
+
+    def inCheck(self):
+        if self.WhiteToMove:
+            return self.squareUnderAttack(self.whiteKingLocation[0],self.whiteKingLocation[1])
+        else:
+            return self.squareUnderAttack(self.blackKingLocation[0],self.blackKingLocation[1])
+
+    def squareUnderAttack(self,r,c):
+        self.WhiteToMove = not self.WhiteToMove
+        oppMoves = self.getAllPossibleMoves()
+        self.WhiteToMove = not self.WhiteToMove
+        for move in oppMoves:
+            if move.endRow == r and move.endCol == c:
+                return True
+        return False
+
 
     def getAllPossibleMoves(self):
         moves = []
@@ -44,6 +92,9 @@ class GameState():
 
 
     def getPawnMoves(self,r,c,moves):
+        # -----------------------        
+        # Moves for WHITE PAWNS
+        # -----------------------
         if self.WhiteToMove:
             if self.board[r-1][c] == '--':
                 moves.append(Move((r,c),(r-1,c),self.board))
@@ -55,6 +106,9 @@ class GameState():
             if c+1 <= 7:
                 if self.board[r-1][c+1][0] == 'B':
                     moves.append(Move((r,c),(r-1,c+1),self.board))
+        # -----------------------        
+        # Moves for BLACK PAWNS
+        # -----------------------
         else:
             if self.board[r+1][c] == '--':
                 moves.append(Move((r,c),(r+1,c),self.board))
@@ -67,9 +121,151 @@ class GameState():
                 if self.board[r+1][c+1][0] == 'W':
                     moves.append(Move((r,c),(r+1,c+1),self.board))
 
-
     def getKnightMoves(self,r,c,moves):
-        pass
+        # -----------------------        
+        # Moves for WHITE KNIGHT
+        # -----------------------
+        if self.WhiteToMove:
+            # check movement: 2UP 
+            row = r - 2
+            if row >= 0:
+                # check movement: 1LEFT
+                col = c - 1 
+                if col >= 0:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'B':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 1RIGHT
+                col = c + 1 
+                if col <= 7:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'B':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 2DOWN 
+            row = r + 2
+            if row <= 7:
+                # check movement: 1LEFT
+                col = c - 1 
+                if col >= 0:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'B':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 1RIGHT
+                col = c + 1 
+                if col <= 7:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'B':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 2LEFT
+            col = c - 2
+            if col >= 0:
+                # check movement: 1UP
+                row = r - 1 
+                if row >= 0:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'B':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 1DOWN
+                row = r + 1 
+                if row <= 7:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'B':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 2RIGHT
+            col = c + 2
+            if col <= 7:
+                # check movement: 1UP
+                row = r - 1 
+                if row >= 0:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'B':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 1DOWN
+                row = r + 1 
+                if row <= 7:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'B':
+                        moves.append(Move((r,c),(row,col),self.board))
+       # -----------------------        
+        # Moves for BLACK KNIGHT
+        # -----------------------
+        elif not self.WhiteToMove:
+            # check movement: 2UP 
+            row = r - 2
+            if row >= 0:
+                # check movement: 1LEFT
+                col = c - 1 
+                if col >= 0:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'W':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 1RIGHT
+                col = c + 1 
+                if col <= 7:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'W':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 2DOWN 
+            row = r + 2
+            if row <= 7:
+                # check movement: 1LEFT
+                col = c - 1 
+                if col >= 0:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'W':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 1RIGHT
+                col = c + 1 
+                if col <= 7:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'W':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 2LEFT
+            col = c - 2
+            if col >= 0:
+                # check movement: 1UP
+                row = r - 1 
+                if row >= 0:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'W':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 1DOWN
+                row = r + 1 
+                if row <= 7:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'W':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 2RIGHT
+            col = c + 2
+            if col <= 7:
+                # check movement: 1UP
+                row = r - 1 
+                if row >= 0:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'W':
+                        moves.append(Move((r,c),(row,col),self.board))
+            # check movement: 1DOWN
+                row = r + 1 
+                if row <= 7:
+                    if self.board[row][col] =='--':
+                        moves.append(Move((r,c),(row,col),self.board))
+                    elif self.board[row][col][0] == 'W':
+                        moves.append(Move((r,c),(row,col),self.board))
 
     def getBishopMoves(self,r,c,moves):
         # -----------------------        
@@ -131,7 +327,7 @@ class GameState():
         # -----------------------        
         # Moves for BLACK BISHOP
         # -----------------------
-        if not self.WhiteToMove:
+        else:
             # check movement: UP & LEFT
             row = r - 1
             col = c - 1
@@ -185,7 +381,6 @@ class GameState():
                 row += 1  
                 col -= 1
 
-
     def getRookMoves(self,r,c,moves):
         # -----------------------        
         # Moves for WHITE ROOK
@@ -238,7 +433,7 @@ class GameState():
         # -----------------------        
         # Moves for BLACK ROOK
         # -----------------------
-        elif not self.WhiteToMove:                
+        else:                
             # check movement: UP
             row = r - 1
             while row >= 0: 
@@ -285,10 +480,138 @@ class GameState():
                 col += 1 
 
     def getKingMoves(self,r,c,moves):
-        pass
+        # -----------------------        
+        # Moves for WHITE KING
+        # -----------------------
+        if self.WhiteToMove:
+            # check movement: UP
+            row = r - 1
+            if row >= 0: 
+                if self.board[row][c] =='--':
+                    moves.append(Move((r,c),(row,c),self.board))
+                elif self.board[row][c][0] == 'B':
+                    moves.append(Move((r,c),(row,c),self.board))
+             # check movement: DOWN
+            row = r + 1
+            if row <= 7: 
+                if self.board[row][c] =='--':
+                    moves.append(Move((r,c),(row,c),self.board))
+                elif self.board[row][c][0] == 'B':
+                    moves.append(Move((r,c),(row,c),self.board))
+             # check movement: LEFT
+            col = c - 1
+            if col >= 0:  
+                if self.board[r][col] =='--':
+                    moves.append(Move((r,c),(r,col),self.board))
+                elif self.board[r][col][0] == 'B':
+                    moves.append(Move((r,c),(r,col),self.board))
+             # check movement: RIGHT
+            col = c + 1
+            if col <= 7:
+                if self.board[r][col] =='--':
+                    moves.append(Move((r,c),(r,col),self.board))
+                elif self.board[r][col][0] == 'B':
+                    moves.append(Move((r,c),(r,col),self.board))
+            # check movement: UP & LEFT
+            row = r - 1
+            col = c - 1
+            if row >= 0 and col >= 0:
+                if self.board[row][col] =='--':
+                    moves.append(Move((r,c),(row,col),self.board))
+                elif self.board[row][col][0] == 'B':
+                    moves.append(Move((r,c),(row,col),self.board))
+            # check movement: UP & RIGHT
+            row = r - 1
+            col = c + 1
+            if row >= 0 and col <= 7:
+                if self.board[row][col] =='--':
+                    moves.append(Move((r,c),(row,col),self.board))
+                elif self.board[row][col][0] == 'B':
+                    moves.append(Move((r,c),(row,col),self.board))
+            # check movement: DOWN & RIGHT
+            row = r + 1
+            col = c + 1
+            if row <= 7 and col <= 7:
+                if self.board[row][col] =='--':
+                    moves.append(Move((r,c),(row,col),self.board))
+                elif self.board[row][col][0] == 'B':
+                    moves.append(Move((r,c),(row,col),self.board))
+            # check movement: DOWN & LEFT
+            row = r + 1
+            col = c - 1
+            if row <= 7 and col >= 0:
+                if self.board[row][col] =='--':
+                    moves.append(Move((r,c),(row,col),self.board))
+                elif self.board[row][col][0] == 'B':
+                    moves.append(Move((r,c),(row,col),self.board))              
+        # -----------------------        
+        # Moves for BLACK KING
+        # -----------------------
+        else:
+            # check movement: UP
+            row = r - 1
+            if row >= 0: 
+                if self.board[row][c] =='--':
+                    moves.append(Move((r,c),(row,c),self.board))
+                elif self.board[row][c][0] == 'W':
+                    moves.append(Move((r,c),(row,c),self.board))
+             # check movement: DOWN
+            row = r + 1
+            if row <= 7: 
+                if self.board[row][c] =='--':
+                    moves.append(Move((r,c),(row,c),self.board))
+                elif self.board[row][c][0] == 'W':
+                    moves.append(Move((r,c),(row,c),self.board))
+             # check movement: LEFT
+            col = c - 1
+            if col >= 0:  
+                if self.board[r][col] =='--':
+                    moves.append(Move((r,c),(r,col),self.board))
+                elif self.board[r][col][0] == 'W':
+                    moves.append(Move((r,c),(r,col),self.board))
+             # check movement: RIGHT
+            col = c + 1
+            if col <= 7:
+                if self.board[r][col] =='--':
+                    moves.append(Move((r,c),(r,col),self.board))
+                elif self.board[r][col][0] == 'W':
+                    moves.append(Move((r,c),(r,col),self.board))
+            # check movement: UP & LEFT
+            row = r - 1
+            col = c - 1
+            if row >= 0 and col >= 0:
+                if self.board[row][col] =='--':
+                    moves.append(Move((r,c),(row,col),self.board))
+                elif self.board[row][col][0] == 'W':
+                    moves.append(Move((r,c),(row,col),self.board))
+            # check movement: UP & RIGHT
+            row = r - 1
+            col = c + 1
+            if row >= 0 and col <= 7:
+                if self.board[row][col] =='--':
+                    moves.append(Move((r,c),(row,col),self.board))
+                elif self.board[row][col][0] == 'W':
+                    moves.append(Move((r,c),(row,col),self.board))
+            # check movement: DOWN & RIGHT
+            row = r + 1
+            col = c + 1
+            if row <= 7 and col <= 7:
+                if self.board[row][col] =='--':
+                    moves.append(Move((r,c),(row,col),self.board))
+                elif self.board[row][col][0] == 'W':
+                    moves.append(Move((r,c),(row,col),self.board))
+            # check movement: DOWN & LEFT
+            row = r + 1
+            col = c - 1
+            if row <= 7 and col >= 0:
+                if self.board[row][col] =='--':
+                    moves.append(Move((r,c),(row,col),self.board))
+                elif self.board[row][col][0] == 'W':
+                    moves.append(Move((r,c),(row,col),self.board))  
 
     def getQueenMoves(self,r,c,moves):
-        pass
+        self.getBishopMoves(r,c,moves)
+        self.getRookMoves(r,c,moves)
 
 class Move():
 
