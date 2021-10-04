@@ -8,7 +8,7 @@ class GameState():
             ["--", "--", "--", "--", "--", "--", "--", "--"],
             ["--", "--", "--", "--", "--", "--", "--", "--"],
             ["W_P","W_P","W_P","W_P","W_P","W_P","W_P","W_P"],
-            ["W_R","W_N","W_B","W_K","W_Q","W_B","W_N","W_R"],
+            ["W_R","W_N","W_B","W_Q","W_K","W_B","W_N","W_R"],
         ]
         self.moveFunctions = {'P': self.getPawnMoves,   'R': self.getRookMoves,
                               'B': self.getBishopMoves, 'N': self.getKnightMoves,
@@ -51,11 +51,10 @@ class GameState():
         else:
             self.enpassantPossible = ()
 
-
         # castle move
         if move.isCastleMove:
             if move.endCol - move.startCol == 2:  # king side castle
-                self.board[move.endRow,move.endCol-1] = self.board[move.endRow][move.endCol+1]
+                self.board[move.endRow][move.endCol-1] = self.board[move.endRow][move.endCol+1]
                 self.board[move.endRow][move.endCol+1] = '--'
             else:
                 self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-2]
@@ -120,8 +119,14 @@ class GameState():
                               
     def getValidMoves(self):
         tempEnpassantPossible = self.enpassantPossible
+        tempCastleRights = CastleRights(self.currentCastlingRight.wks,self.currentCastlingRight.bks, \
+                                        self.currentCastlingRight.bks,self.currentCastlingRight.bqs)
         # 1. first generate all the moves
         moves = self.getAllPossibleMoves()
+        if self.WhiteToMove:
+            self.getCastleMoves(self.whiteKingLocation[0],self.whiteKingLocation[1],moves)
+        else:
+            self.getCastleMoves(self.blackKingLocation[0],self.blackKingLocation[1],moves)        
         # 2. make the move
         for i in range(len(moves)-1,-1,-1):  # when removing from list, go backwards in indices
             self.makeMove(moves[i])
@@ -142,7 +147,7 @@ class GameState():
             self.staleMate = False
             
         self.enpassantPossible = tempEnpassantPossible
-        
+        self.currentCastlingRight = tempCastleRights
         return moves
 
     def inCheck(self):
@@ -700,10 +705,10 @@ class GameState():
     def getCastleMoves(self,r,c,moves):
         if self.squareUnderAttack(r,c):
             return
-        if (self.WhiteToMove and self.currentCastlingRight.wks) and \
+        if (self.WhiteToMove and self.currentCastlingRight.wks) or \
            (not self.WhiteToMove and self.currentCastlingRight.bks):
                self.getKingSideCastleMoves(r,c,moves)
-        if (self.WhiteToMove and self.currentCastlingRight.wqs) and \
+        if (self.WhiteToMove and self.currentCastlingRight.wqs) or \
            (not self.WhiteToMove and self.currentCastlingRight.bqs):
                self.getQueenSideCastleMoves(r,c,moves)
                  
