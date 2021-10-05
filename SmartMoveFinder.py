@@ -17,18 +17,24 @@ def findBestMove(gs,validMoves):
     for playerMove in validMoves:
         gs.makeMove(playerMove)
         opponentsMoves = gs.getValidMoves()
-        opponentMaxScore = -CheckMate
-        for opponentsMove in opponentsMoves:
-            gs.makeMove(opponentsMove)
-            if gs.checkMate:
-                score = -turnMultiplier * CheckMate
-            elif gs.staleMate:
-                score = StaleMate
-            else:
-                score = -turnMultiplier * scoreMaterial(gs.board)
-            if score > opponentMaxScore:
-                opponentMaxScore = score
-            gs.undoMove()
+        if gs.staleMate:
+            opponentMaxScore = StaleMate
+        elif gs.checkMate:
+            opponentMaxScore = -CheckMate
+        else:
+            opponentMaxScore = -CheckMate
+            for opponentsMove in opponentsMoves:
+                gs.makeMove(opponentsMove)
+                gs.getValidMoves()
+                if gs.checkMate:
+                    score = CheckMate
+                elif gs.staleMate:
+                    score = StaleMate
+                else:
+                    score = -turnMultiplier * scoreMaterial(gs.board)
+                if score > opponentMaxScore:
+                    opponentMaxScore = score
+                gs.undoMove()
         if opponentMaxScore < opponentMinMaxScore:
             opponentMinMaxScore = opponentMaxScore
             bestPlayerMove = playerMove
