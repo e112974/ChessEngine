@@ -3,7 +3,7 @@
 #-------------------------------
 from pygame.draw import rect
 from pygame.font import SysFont
-import ChessEngine
+import ChessEngine, SmartMoveFinder
 import pygame as p
 
 p.init()
@@ -33,12 +33,15 @@ def main():
     sqSelected = ()    # tuple(row,col)
     playerClicks = []  # two tuples [(6,4) (4,4)]
     gameOver = False
+    playerOne = True  # if human playing white, this will be true, if AI playing for false
+    playerTwo = False
     while running:
+        humanTurn = (gs.WhiteToMove and playerOne) or (not gs.WhiteToMove and playerTwo)
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
             elif e.type == p.MOUSEBUTTONDOWN:
-                if not gameOver:
+                if not gameOver and humanTurn:
                     location = p.mouse.get_pos()
                     col = location[0]//SqSize
                     row = location[1]//SqSize
@@ -72,6 +75,15 @@ def main():
                     playerClicks = []
                     moveMade = False
                     animate = False
+        
+        # AI move finder
+        if not gameOver and not humanTurn:
+            AImove = SmartMoveFinder.findBestMove(gs,validMoves)
+            if AImove is None:
+                AImove = SmartMoveFinder.findRandomMove(validMoves)
+            gs.makeMove(AImove)
+            moveMade = True
+            animate = True
                     
         if moveMade:
             if animate:
