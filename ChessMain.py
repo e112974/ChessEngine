@@ -2,6 +2,7 @@
 # import modules
 #-------------------------------
 from pygame.draw import rect
+from pygame.font import SysFont
 import ChessEngine
 import pygame as p
 
@@ -26,45 +27,69 @@ def main():
     gs = ChessEngine.GameState()
     validMoves = gs.getValidMoves()
     moveMade  = False
+    animate = False  # flag variable when a move is animated
     loadImages()
     running = True
     sqSelected = ()    # tuple(row,col)
     playerClicks = []  # two tuples [(6,4) (4,4)]
+    gameOver = False
     while running:
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
             elif e.type == p.MOUSEBUTTONDOWN:
-                location = p.mouse.get_pos()
-                col = location[0]//SqSize
-                row = location[1]//SqSize
-                if sqSelected == (row,col):
-                    sqSelected = ()
-                    playerClicks = []
-                else:
-                    sqSelected = (row,col)
-                    playerClicks.append(sqSelected)
-                if len(playerClicks) == 2:
-                    move = ChessEngine.Move(playerClicks[0],playerClicks[1],gs.board)
-                    print(move.getChessNotation())
-                    for i in range(len(validMoves)):
-                        if move == validMoves[i]:
-                            gs.makeMove(validMoves[i])
-                            moveMade = True
-                            sqSelected = ()
-                            playerClicks = []
-                    if not moveMade:
-                        playerClicks = [sqSelected]
+                if not gameOver:
+                    location = p.mouse.get_pos()
+                    col = location[0]//SqSize
+                    row = location[1]//SqSize
+                    if sqSelected == (row,col):
+                        sqSelected = ()
+                        playerClicks = []
+                    else:
+                        sqSelected = (row,col)
+                        playerClicks.append(sqSelected)
+                    if len(playerClicks) == 2:
+                        move = ChessEngine.Move(playerClicks[0],playerClicks[1],gs.board)
+                        print(move.getChessNotation())
+                        for i in range(len(validMoves)):
+                            if move == validMoves[i]:
+                                gs.makeMove(validMoves[i])
+                                moveMade = True
+                                animate = True
+                                sqSelected = ()
+                                playerClicks = []
+                        if not moveMade:
+                            playerClicks = [sqSelected]
             elif e.type == p.KEYDOWN:
                 if e.key == p.K_z:
                     gs.undoMove()
                     moveMade = True
+                    animate = False
+                if e.key == p.K_r:    # reset the board when r is pressed
+                    gs = ChessEngine.GameState()
+                    validMoves = gs.getValidMoves()
+                    sqSelected = ()
+                    playerClicks = []
+                    moveMade = False
+                    animate = False
+                    
         if moveMade:
-            animateMove(gs.moveLog[-1],screen,gs.board,clock)
+            if animate:
+                animateMove(gs.moveLog[-1],screen,gs.board,clock)
             validMoves = gs.getValidMoves()
             moveMade = False
+            animate = False
             
         DrawGameState(screen,gs,validMoves,sqSelected)
+        if gs.checkMate == True:
+            gameOver = True
+            if gs.WhiteToMove:
+                drawText(screen,'Black Wins!!')
+            else:
+                drawText(screen,'White Wins!!')
+        elif gs.staleMate == True:
+            gameOver = True
+            drawText(screen,'It is a Draw!!')
         clock.tick(MaxFPS)
         p.display.flip()
 
@@ -90,7 +115,6 @@ def DrawGameState(screen,gs,validMoves,sqSelected):
     DrawBoard(screen)
     HighlightSquares(screen,gs,validMoves,sqSelected)
     DrawPieces(screen,gs.board)
-
 
 def DrawBoard(screen):
     global colors
@@ -129,8 +153,16 @@ def animateMove(move,screen,board,clock):
         # draw moving piece
         screen.blit(Images[move.pieceMoved],p.Rect(c*SqSize,r*SqSize,SqSize,SqSize))
         p.display.flip()
-        clock.tick(60)
+        clock.tick(120)   
     
+def drawText(screen,text):
+    font = p.font.SysFont('Helvetica',128,True,False)
+    textObject = font.render(text,0,p.Color('Gray'))
+    textLocation = p.Rect(0,0,Width,Height).move(Width/2-textObject.get_width()/2, \
+                    Height/2-textObject.get_height()/2)
+    screen.blit(textObject,textLocation)
+    textObject = font.render(text,0,p.Color('Black'))
+    screen.blit(textObject,textLocation.move(2,2))
     
 if __name__ == "__main__":
     main()
