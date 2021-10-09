@@ -20,6 +20,7 @@ class GameState():
         self.checkMate = False
         self.staleMate = False
         self.enpassantPossible = ()
+        self.enpassantPossibleLog = [self.enpassantPossible]
         self.currentCastlingRight = CastleRights(True,True,True,True)
         self.castleRightsLog = [CastleRights(self.currentCastlingRight.wks,
                                              self.currentCastlingRight.wqs,
@@ -56,9 +57,11 @@ class GameState():
             if move.endCol - move.startCol == 2:  # king side castle
                 self.board[move.endRow][move.endCol-1] = self.board[move.endRow][move.endCol+1]
                 self.board[move.endRow][move.endCol+1] = '--'
-            else:
+            else: # queen side
                 self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-2]
                 self.board[move.endRow][move.endCol-2] = '--'
+        
+        self.enpassantPossibleLog.append(self.enpassantPossible)
         
         # update Castling Rights - whenever a rook or a king moves
         self.updateCastleRights(move)
@@ -81,13 +84,14 @@ class GameState():
             if move.isEnpassantMove:
                 self.board[move.endRow][move.endCol] = '--'
                 self.board[move.startRow][move.endCol] = move.pieceCaptured
-                self.enpassantPossible = (move.endRow,move.endCol)
-            # undo a 2 square pawn advance
-            if move.pieceMoved[2] == 'P' and abs(move.startRow - move.endRow) == 2:
-                self.enpassantPossible = ()
+                
+        self.enpassantPossibleLog.pop()
+        self.enpassantPossible = self.enpassantPossibleLog[-1]
+        
         # undo castling rights
         self.castleRightsLog.pop()  # get rid of castling rights of the move we are undoing
-        self.currentCastlingRight = self.castleRightsLog[-1]    
+        newRights = self.castleRightsLog[-1]
+        self.currentCastlingRight = CastleRights(newRights.wks,newRights.bks,newRights.wqs,newRights.bqs)    
         # undo castle move
         if move.isCastleMove:
             if move.endCol - move.startCol == 2:
@@ -118,7 +122,21 @@ class GameState():
                 if move.startCol == 0:  # left rook
                     self.currentCastlingRight.bqs = False
                 elif move.startCol == 7: # right rook
-                    self.currentCastlingRight.bks = False       
+                    self.currentCastlingRight.bks = False      
+                    
+        # if rock is captured
+        if move.pieceCaptured == 'W_R':
+            if move.endRow == 7:
+                if move.endCol == 0:
+                    self.currentCastlingRight.wqs = False
+                elif move.endCol == 7:
+                    self.currentCastlingRight.wks = False
+        elif move.pieceCaptured == 'B_R':
+            if move.endRow == 0:
+                if move.endCol == 0:
+                    self.currentCastlingRight.bqs = False
+                elif move.endCol == 7:
+                    self.currentCastlingRight.bks = False
                               
     def getValidMoves(self):
         tempEnpassantPossible = self.enpassantPossible
@@ -760,6 +778,7 @@ class Move():
         self.isEnpassantMove = isEnpassantMove
         if self.isEnpassantMove:
             self.pieceCaptured = 'W_P' if self.pieceMoved == 'B_P' else 'B_P'
+        self.isCaptured = self.pieceCaptured != '--'
         self.isCastleMove = isCastleMove
         
         self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol
@@ -774,3 +793,27 @@ class Move():
 
     def getRankFile(self, r, c):
         return self.colsToFiles[c] + self.rowsToRanks[r]
+    
+    # overriding str() function
+    def __str__(self):
+        # castle move
+        if self.isCastleMove:
+            return 'O-O' if self.endCol == 6 else 'O-O-O'
+        
+        endSquare = self.getRankFile(self.endRow,self.endCol)
+        # pawn moves
+        if self.pieceMoved[2] == 'P':
+            if self.isCaptured:
+                return self.colsToFiles[self.startCol] + 'x' + endSquare    
+            else: 
+                return endSquare
+        # TODO: pawn promotions
+        # TODO: two pieces move same square
+        # TODO: specify chess moves
+        
+        # piece moves
+        moveString = self.pieceMoved[2]
+        if self.isCaptured:
+            moveString += 'x'
+        return moveString + endSquare
+            

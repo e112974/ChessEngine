@@ -7,9 +7,11 @@ import ChessEngine, SmartMoveFinder
 import pygame as p
 
 p.init()
-Width = Height = 1024
+BoardWidth = BoardHeight = 1024
+MoveLogPanelWidth = 400
+MoveLogPanelHeight = BoardHeight
 Dimension = 8
-SqSize = Height // Dimension
+SqSize = BoardHeight // Dimension
 MaxFPS = 15
 Images = {}
 
@@ -21,9 +23,10 @@ def loadImages():
 
 def main():
     p.init()
-    screen = p.display.set_mode((Width,Height))
+    screen = p.display.set_mode((BoardWidth+MoveLogPanelWidth,BoardHeight))
     clock = p.time.Clock()
     screen.fill(p.Color("white"))
+    moveLogFont = p.font.SysFont('Arial',24,False,False)
     gs = ChessEngine.GameState()
     validMoves = gs.getValidMoves()
     moveMade  = False
@@ -34,7 +37,7 @@ def main():
     playerClicks = []  # two tuples [(6,4) (4,4)]
     gameOver = False
     playerOne = True  # if human playing white, this will be true, if AI playing for false
-    playerTwo = False
+    playerTwo = True
     while running:
         humanTurn = (gs.WhiteToMove and playerOne) or (not gs.WhiteToMove and playerTwo)
         for e in p.event.get():
@@ -45,7 +48,7 @@ def main():
                     location = p.mouse.get_pos()
                     col = location[0]//SqSize
                     row = location[1]//SqSize
-                    if sqSelected == (row,col):
+                    if sqSelected == (row,col) or col >= 8:
                         sqSelected = ()
                         playerClicks = []
                     else:
@@ -94,19 +97,18 @@ def main():
             moveMade = False
             animate = False
             
-        DrawGameState(screen,gs,validMoves,sqSelected)
-        if gs.checkMate == True:
+        DrawGameState(screen,gs,validMoves,sqSelected,moveLogFont)
+        
+        if gs.checkMate or gs.staleMate:
             gameOver = True
-            if gs.WhiteToMove:
-                drawText(screen,'Black Wins!!')
+            if gs.staleMate:
+                text = 'It is a Draw!!'
             else:
-                drawText(screen,'White Wins!!')
-        elif gs.staleMate == True:
-            gameOver = True
-            drawText(screen,'It is a Draw!!')
+                text = 'Black Wins!!' if gs.WhiteToMove else 'White Wins!!'
+            drawEndGameText(screen,text)
+
         clock.tick(MaxFPS)
         p.display.flip()
-
 
 # highlight square selected and moves for piece selected
 
@@ -125,11 +127,36 @@ def HighlightSquares(screen,gs,validMoves,sqSelected):
                 if move.startRow == r and move.startCol == c:
                     screen.blit(s,(SqSize*move.endCol,SqSize*move.endRow))    
 
-def DrawGameState(screen,gs,validMoves,sqSelected):
+def DrawGameState(screen,gs,validMoves,sqSelected,moveLogFont):
     DrawBoard(screen)
     HighlightSquares(screen,gs,validMoves,sqSelected)
     DrawPieces(screen,gs.board)
-
+    drawMoveLog(screen,gs,moveLogFont)
+    
+def drawMoveLog(screen,gs,font):
+    moveLogRect = p.Rect(BoardWidth,0,MoveLogPanelWidth,MoveLogPanelHeight)
+    p.draw.rect(screen,p.Color('black'),moveLogRect)
+    moveLog = gs.moveLog
+    moveTexts = []
+    for i in range(0,len(moveLog),2):
+        moveString = str(i//2 + 1) + '.' + str(moveLog[i]) + ' '
+        if i+1 < len(moveLog):  # make sure black made a move
+            moveString += str(moveLog[i+1])
+        moveTexts.append(moveString)
+    movesPerRow = 3
+    padding = 5
+    lineSpacing = 1
+    textY = padding
+    for i in range(0,len(moveTexts),movesPerRow):
+        text = ' '
+        for j in range(movesPerRow):
+            if i+j < len(moveTexts):
+                text += moveTexts[i+j] + '  '
+        textObject = font.render(text,True,p.Color('white'))
+        textLocation = moveLogRect.move(padding,textY)
+        screen.blit(textObject,textLocation)
+        textY += textObject.get_height() + lineSpacing
+        
 def DrawBoard(screen):
     global colors
     colors = [p.Color("white"), p.Color("brown")]
@@ -163,17 +190,20 @@ def animateMove(move,screen,board,clock):
         p.draw.rect(screen,color,endSquare)
         # draw captured piece onto rectangle
         if move.pieceCaptured != '--':
+            if move.isEnpassantMove:
+                enPassantRow = move.endRow + 1 if move.pieceCaptured[0] == 'B' else move.endRow - 1
+                endSquare = p.Rect(move.endCol*SqSize,enPassantRow*SqSize,SqSize,SqSize)
             screen.blit(Images[move.pieceCaptured], endSquare)
         # draw moving piece
         screen.blit(Images[move.pieceMoved],p.Rect(c*SqSize,r*SqSize,SqSize,SqSize))
         p.display.flip()
         clock.tick(120)   
     
-def drawText(screen,text):
+def drawEndGameText(screen,text):
     font = p.font.SysFont('Helvetica',128,True,False)
     textObject = font.render(text,0,p.Color('Gray'))
-    textLocation = p.Rect(0,0,Width,Height).move(Width/2-textObject.get_width()/2, \
-                    Height/2-textObject.get_height()/2)
+    textLocation = p.Rect(0,0,BoardWidth,BoardHeight).move(BoardWidth/2-textObject.get_Boardwidth()/2, \
+                    BoardHeight/2-textObject.get_Boardheight()/2)
     screen.blit(textObject,textLocation)
     textObject = font.render(text,0,p.Color('Black'))
     screen.blit(textObject,textLocation.move(2,2))
