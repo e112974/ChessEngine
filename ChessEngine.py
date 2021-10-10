@@ -54,12 +54,13 @@ class GameState():
 
         # castle move
         if move.isCastleMove:
-            if move.endCol - move.startCol == 2:  # king side castle
-                self.board[move.endRow][move.endCol-1] = self.board[move.endRow][move.endCol+1]
-                self.board[move.endRow][move.endCol+1] = '--'
-            else: # queen side
-                self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-2]
-                self.board[move.endRow][move.endCol-2] = '--'
+            if move.endCol + 1 <= 7 and move.endCol - 2 >= 0:
+                if move.endCol - move.startCol == 2:  # king side castle
+                    self.board[move.endRow][move.endCol-1] = self.board[move.endRow][move.endCol+1]
+                    self.board[move.endRow][move.endCol+1] = '--'
+                else: # queen side
+                    self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-2]
+                    self.board[move.endRow][move.endCol-2] = '--'
         
         self.enpassantPossibleLog.append(self.enpassantPossible)
         
@@ -94,12 +95,13 @@ class GameState():
         self.currentCastlingRight = CastleRights(newRights.wks,newRights.bks,newRights.wqs,newRights.bqs)    
         # undo castle move
         if move.isCastleMove:
-            if move.endCol - move.startCol == 2:
-                self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-1]
-                self.board[move.endRow][move.endCol-1] = '--'
-            else:
-                self.board[move.endRow][move.endCol-2] = self.board[move.endRow][move.endCol+1]
-                self.board[move.endRow][move.endCol+1] = '--'
+            if move.endCol + 1 <= 7 and move.endCol - 2 >= 0:
+                if move.endCol - move.startCol == 2:
+                    self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-1]
+                    self.board[move.endRow][move.endCol-1] = '--'
+                else:
+                    self.board[move.endRow][move.endCol-2] = self.board[move.endRow][move.endCol+1]
+                    self.board[move.endRow][move.endCol+1] = '--'
                 
         self.checkMate = False
         self.staleMate = False
@@ -734,9 +736,10 @@ class GameState():
                self.getQueenSideCastleMoves(r,c,moves)
                  
     def getKingSideCastleMoves(self,r,c,moves):
-        if self.board[r][c+1] == '--' and self.board[r][c+2]:
-            if not self.squareUnderAttack(r,c+1) and not self.squareUnderAttack(r,c+2):
-                moves.append(Move((r,c),(r,c+2),self.board,isCastleMove=True))
+        if c+2 <= 7:
+            if self.board[r][c+1] == '--' and self.board[r][c+2]:
+                if not self.squareUnderAttack(r,c+1) and not self.squareUnderAttack(r,c+2):
+                    moves.append(Move((r,c),(r,c+2),self.board,isCastleMove=True))
 
     def getQueenSideCastleMoves(self,r,c,moves):
         if self.board[r][c-1] == '--' and \

@@ -36,8 +36,8 @@ def main():
     sqSelected = ()    # tuple(row,col)
     playerClicks = []  # two tuples [(6,4) (4,4)]
     gameOver = False
-    playerOne = True  # if human playing white, this will be true, if AI playing for false
-    playerTwo = True
+    playerOne = False  # if human playing white, this will be true, if AI playing for false
+    playerTwo = False
     while running:
         humanTurn = (gs.WhiteToMove and playerOne) or (not gs.WhiteToMove and playerTwo)
         for e in p.event.get():
@@ -202,8 +202,8 @@ def animateMove(move,screen,board,clock):
 def drawEndGameText(screen,text):
     font = p.font.SysFont('Helvetica',128,True,False)
     textObject = font.render(text,0,p.Color('Gray'))
-    textLocation = p.Rect(0,0,BoardWidth,BoardHeight).move(BoardWidth/2-textObject.get_Boardwidth()/2, \
-                    BoardHeight/2-textObject.get_Boardheight()/2)
+    textLocation = p.Rect(0,0,BoardWidth,BoardHeight).move(BoardWidth/2-textObject.get_width()/2, \
+                    BoardHeight/2-textObject.get_height()/2)
     screen.blit(textObject,textLocation)
     textObject = font.render(text,0,p.Color('Black'))
     screen.blit(textObject,textLocation.move(2,2))

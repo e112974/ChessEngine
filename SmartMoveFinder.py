@@ -2,6 +2,62 @@ import random
 from typing import Counter
 
 pieceScore = {'K':0,'Q':10,'R':5,'B':3,'N':3,'P':1}
+knightScores = [[1,1,1,1,1,1,1,1],
+                [1,2,2,2,2,2,2,1],
+                [1,2,3,3,3,3,2,1],
+                [1,2,3,4,4,3,2,1],
+                [1,2,3,4,4,3,2,1],
+                [1,2,3,3,3,3,2,1],
+                [1,2,2,2,2,2,2,1],
+                [1,1,1,1,1,1,1,1]]
+
+bishopScores = [[4,3,2,1,1,2,3,4],
+                [3,4,4,2,2,3,4,3],
+                [2,3,4,3,3,4,3,2],
+                [1,2,3,4,4,3,2,1],
+                [1,2,3,4,4,3,2,1],
+                [2,3,4,3,3,4,3,2],
+                [3,4,3,2,2,3,4,3],
+                [4,3,2,1,1,2,3,4]]
+
+queenScores =  [[1,1,1,3,1,1,1,1],
+                [1,2,3,3,3,1,1,1],
+                [1,4,3,3,3,4,2,1],
+                [1,2,3,3,3,2,2,1],
+                [1,2,3,3,3,2,2,1],
+                [1,4,3,3,3,4,2,1],
+                [1,2,2,3,3,1,1,1],
+                [1,1,1,3,1,1,1,1]]
+
+rookScores =   [[4,3,4,4,4,4,3,4],
+                [4,4,4,4,4,4,4,4],
+                [1,1,2,3,3,2,1,1],
+                [1,2,3,4,4,3,2,1],
+                [1,2,3,4,4,3,2,1],
+                [1,1,2,2,2,2,1,1],
+                [4,4,4,4,4,4,4,4],
+                [4,3,4,4,4,4,3,4]]
+
+whitePawnScores = [[8,8,8,8,8,8,8,8],
+                   [8,8,8,8,8,8,8,8],
+                   [5,6,6,7,7,6,6,5],
+                   [2,3,3,5,5,3,3,2],
+                   [1,2,3,4,4,3,2,1],
+                   [1,1,2,3,3,2,1,1],
+                   [1,1,1,0,0,1,1,1],
+                   [0,0,0,0,0,0,0,0]]
+
+blackPawnScores = [ [0,0,0,0,0,0,0,0],
+                    [1,1,1,0,0,1,1,1],
+                    [1,1,2,3,3,2,1,1],
+                    [1,2,3,4,4,3,2,1],
+                    [2,3,3,5,5,3,3,2],
+                    [5,6,6,7,7,6,6,5],
+                    [8,8,8,8,8,8,8,8],
+                    [8,8,8,8,8,8,8,8]]
+
+piecePositionScores = {'N': knightScores,'R': rookScores, 'Q': queenScores, 'B': bishopScores,
+                       'B_P': blackPawnScores, 'W_P': whitePawnScores}
 CheckMate = 1000
 StaleMate = 0
 MaxDepth = 2
@@ -115,6 +171,7 @@ def findMoveNegaMaxAlphaBeta(gs,validMoves,Depth,alpha,beta,turnMultiplier):
             maxScore = score
             if Depth == MaxDepth:
                 nextMove = move
+                print(move,score)
         gs.undoMove()
         # implementation of alpha & beta
         if maxScore > alpha: #pruning happens
@@ -134,12 +191,24 @@ def scoreBoard(gs):
         return StaleMate
      
     score = 0
-    for row in gs.board:
-        for square in row:
-            if square[0] == 'W':
-                score += pieceScore[square[2]]
-            elif square[0] == 'B':
-                score -= pieceScore[square[2]]
+    for row in range(len(gs.board)):
+        for col in range(len(gs.board[row])):
+            square = gs.board[row][col]
+            if square != '--':
+                # calculate position score
+                piecePositionScore = 0
+                # only king has no  position score
+                if square[2] != 'K':
+                    # for pawns we need to check the color as well
+                    if square[2] == 'P':
+                        piecePositionScore = piecePositionScores[square][row][col]
+                    else:
+                        piecePositionScore = piecePositionScores[square[2]][row][col]
+                
+                if square[0] == 'W':
+                    score += pieceScore[square[2]] + piecePositionScore * 0.1
+                elif square[0] == 'B':
+                    score -= pieceScore[square[2]] + piecePositionScore * 0.1
     return score    
 
 # score the board based on material
