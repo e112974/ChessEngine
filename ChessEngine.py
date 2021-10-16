@@ -1,3 +1,7 @@
+# -------------------------------------------------------- #
+#                      GameState class                     #
+# -------------------------------------------------------- #
+
 class GameState():
     def __init__(self):
         self.board = [
@@ -10,10 +14,31 @@ class GameState():
             ["W_P","W_P","W_P","W_P","W_P","W_P","W_P","W_P"],
             ["W_R","W_N","W_B","W_Q","W_K","W_B","W_N","W_R"],
         ]
-        self.WhiteToMove = True
-        self.moveLog = []
-        self.whiteKingLocation = (7,4)
-        self.blackKingLocation = (0,4)
-        self.checkMate = False
-        self.staleMate = False
+        self.Turn         = 'White'
+        self.MoveLog      = []
+        self.CheckMate    = False
+        self.StaleMate    = False
+        self.WhiteCastled = False
+        self.BlackCastled = False
+        self.KingInCheck  = False
 
+    # ---------------------------------------------------- #
+    #                  MovePiece function                  #
+    # ---------------------------------------------------- #
+    
+    def MovePiece():
+        pass
+ 
+    # ---------------------------------------------------- #
+    #                  UndoMove function                   #
+    # ---------------------------------------------------- #
+    
+    def UndoMove():
+        pass
+       
+    # ---------------------------------------------------- #
+    #              CalculateAllMoves function              #
+    # ---------------------------------------------------- #
+    
+    def CalculateAllMoves():
+        pass
