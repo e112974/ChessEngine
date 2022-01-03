@@ -60,11 +60,7 @@ def main():
                 else:
                     SelectedSquare = (row,col)
                     ClickedSquares.append(SelectedSquare)        # add to the list of clicked squares
-                    
-                for i in range(len(ClickedSquares)):       
-                    print('Clicked Square # {0} is {1}'.format(i+1,ClickedSquares[i]))    
-                print('')      
-                           
+    
                 if len(ClickedSquares) == 2:                     # if user clicks 2nd time
                     SelectedMove = ChessEngine.Move(ClickedSquares[0],ClickedSquares[1],GameState.board)       
                     for i in range(len(AllValidMoves)):          # check if selected move is a legal move
@@ -74,13 +70,17 @@ def main():
                             MoveMade = True
                     if not MoveMade:
                         ClickedSquares = [SelectedSquare]
-    
+            elif Event.type == pygame.KEYDOWN:     # if user clicks on the board
+                if Event.key == pygame.K_z:
+                    GameState.UndoMove()
+                    MoveMade = True
+
         # -------------------- stop game if check mate -------------------- #                       
         if GameState.CheckMate:
             RunningFlag = False
             
         # -------------------- draw updated game board status  ------------ #    
-        DrawGameState(Screen,GameState,MoveLogFont)
+        DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont)
                
         pygame.display.flip()
         
@@ -89,13 +89,32 @@ def main():
             AllValidMoves = GameState.CalculateAllMoves()     # update list of valid moves
             MoveMade = False                                  # update flag
         
+        
+        
+def HighlightSquares(screen,GameState,AllValidMoves,SelectedSquare):
+    if SelectedSquare != ():
+        row,col = SelectedSquare
+        SelectedPieceColor = GameState.board[row][col][0]
+        if SelectedPieceColor == GameState.Turn:
+            # highlight selected square
+            s = pygame.Surface((SqSize,SqSize))
+            s.set_alpha(100)  # transparency value -> 0 for transparent
+            s.fill(pygame.Color('blue'))
+            screen.blit(s,(col*SqSize,row*SqSize))
+            # highlight moves
+            s.fill(pygame.Color('yellow'))
+            for move in AllValidMoves:
+                if move.StartRow == row and move.StartCol == col:
+                    screen.blit(s,(SqSize*move.EndCol,SqSize*move.EndRow))  
+                            
 # -------------------------------------------------------- #
 #                 draw game state function                 #
 # -------------------------------------------------------- #
 
-def DrawGameState(screen,gs,moveLogFont):
+def DrawGameState(screen,GameState,AllValidMoves,SelectedSquare,moveLogFont):
     DrawBoard(screen)
-    DrawPieces(screen,gs.board)
+    HighlightSquares(screen,GameState,AllValidMoves,SelectedSquare)
+    DrawPieces(screen,GameState.board)
 
 # -------------------------------------------------------- #
 #                    draw board function                   #

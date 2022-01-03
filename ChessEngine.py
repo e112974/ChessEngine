@@ -8,8 +8,8 @@ class GameState():
             ["B_R","B_N","B_B","B_Q","B_K","B_B","B_N","B_R"],
             ["B_P","B_P","B_P","B_P","B_P","B_P","B_P","B_P"],
             ["--", "--", "--", "--", "--", "--", "--", "--"],
-            ["--", "--", "--", "--", "--", "B_Q", "--", "--"],
-            ["--", "--", "W_Q", "--", "--", "--", "--", "--"],
+            ["--", "--", "--", "--", "--", "--", "--", "--"],
+            ["--", "--", "--", "--", "--", "--", "--", "--"],
             ["--", "--", "--", "--", "--", "--", "--", "--"],
             ["W_P","W_P","W_P","W_P","W_P","W_P","W_P","W_P"],
             ["W_R","W_N","W_B","W_Q","W_K","W_B","W_N","W_R"],
@@ -36,13 +36,20 @@ class GameState():
         self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved
         self.MoveLog.append(Move)
         self.Turn = 'B' if self.Turn == 'W' else 'W'
+        # pawn promotion
+        if Move.PawnPromotion:
+            self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved[0] + '_Q'
         
     # ---------------------------------------------------- #
     #                  UndoMove function                   #
     # ---------------------------------------------------- #
     
     def UndoMove(self):
-        pass
+        if len(self.MoveLog) != 0:
+            move = self.MoveLog.pop()
+            self.board[move.StartRow][move.StartCol] = move.PieceMoved
+            self.board[move.EndRow][move.EndCol] = move.PieceCaptured
+            self.Turn = 'B' if self.Turn == 'W' else 'W'
        
     # ---------------------------------------------------- #
     #          Update list of valid moves function         #
@@ -66,85 +73,131 @@ class GameState():
     # ---------------------------------------------------- #
     
     def PawnMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
-        pass
-    
-    def KingMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
-        pass
-    
-    def RookMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
-        # -----------------------        
-        # Moves for ROOK
-        # -----------------------
-        Directions = [-1,1]         
+        Direction = -1 if self.Turn == 'W' else 1
         # check movement: UP & DOWN
+        CheckCol = PieceCol
+        if (self.Turn == 'W' and PieceRow == 6) or (self.Turn == 'B' and PieceRow == 1):
+            CheckRow = PieceRow + Direction
+            self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
+            CheckRow = CheckRow + Direction
+            self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)           
+        else:
+            CheckRow = PieceRow + Direction
+            if CheckRow >= 0 and CheckRow <= 7: 
+                self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves) 
+        # check capturing piece: DIAGONAL
+        CheckCol = PieceCol
+        Directions = [-1,1]   
         for i in Directions:
-            row = PieceRow + i
-            while row >= 0 and row <= 7: 
-                if self.board[row][PieceCol] == '--':
-                    AllValidMoves.append(Move((PieceRow,PieceCol),(row,PieceCol),self.board))
-                else:
-                    if PieceColor == self.Turn:
-                        break
-                    else:
-                        AllValidMoves.append(Move((PieceRow,PieceCol),(row,PieceCol),self.board))
-                        break
-                row = row + i  
+            CheckCol = PieceCol + i
+            CheckRow = PieceRow + Direction
+            if CheckRow >= 0 and CheckRow <= 7 and CheckCol >= 0 and CheckCol <= 7: 
+                TargetPieceColor = self.board[CheckRow][CheckCol][0]
+                if (TargetPieceColor != '-') and (PieceColor != TargetPieceColor):
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
+            
+    def KingMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
+        Directions = [-1,1]   
+        # check movement: UP & DOWN
+        CheckCol = PieceCol
+        for i in Directions:
+            CheckRow = PieceRow + i
+            if CheckRow >= 0 and CheckRow <= 7: 
+                self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)        
         # check movement: LEFT & RIGHT
+        CheckRow = PieceRow
         for i in Directions:
-            col = PieceCol + i
-            while col >= 0 and col <= 7:
-                if self.board[PieceRow][col] == '--':
-                    AllValidMoves.append(Move((PieceRow,PieceCol),(PieceRow,col),self.board))
-                else:
-                    if PieceColor == self.Turn:
-                        break
-                    else:
-                        AllValidMoves.append(Move((PieceRow,PieceCol),(PieceRow,col),self.board))
-                        break
-                col = col + i 
+            CheckCol = PieceCol + i
+            if CheckCol >= 0 and CheckCol <= 7:
+                self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
+        # check movement: UP - LEFT & DOWN - RIGHT
+        for i in Directions:
+            CheckRow = PieceRow + i
+            CheckCol = PieceCol + i
+            if CheckRow >= 0 and CheckRow <= 7 and CheckCol >= 0 and CheckCol <= 7:
+                self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
+        # check movement: UP - RIGHT & DOWN - LEFT
+        for i in Directions:                
+            CheckRow = PieceRow + i
+            CheckCol = PieceCol - i
+            if CheckRow >= 0 and CheckRow <= 7 and CheckCol >= 0 and CheckCol <= 7:
+                self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
+    
+    def CheckSquare(self,PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves):
+        BreakFlag = False
+        TargetPieceColor = self.board[CheckRow][CheckCol][0]
+        if self.board[CheckRow][CheckCol] == '--':
+            AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
+        else:
+            if PieceColor == TargetPieceColor:
+                BreakFlag = True
+            else:
+                AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
+                BreakFlag = True
+        return BreakFlag
+            
+    def RookMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
+        Directions = [-1,1]     
+        # check movement: UP & DOWN
+        CheckCol = PieceCol
+        for i in Directions:
+            BreakFlag = False    
+            CheckRow = PieceRow + i
+            while (CheckRow >= 0 and CheckRow <= 7) and (not BreakFlag): 
+                BreakFlag = self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
+                CheckRow = CheckRow + i         
+        # check movement: LEFT & RIGHT
+        CheckRow = PieceRow
+        for i in Directions:
+            BreakFlag  = False
+            CheckCol = PieceCol + i
+            while (CheckCol >= 0 and CheckCol <= 7) and (not BreakFlag):
+                BreakFlag = self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
+                CheckCol = CheckCol + i 
                  
     def QueenMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
         self.BishopMoves(PieceColor,PieceRow,PieceCol,AllValidMoves)
         self.RookMoves(PieceColor,PieceRow,PieceCol,AllValidMoves)
         
     def BishopMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
-        # -----------------------        
-        # Moves for BISHOP
-        # -----------------------
         Directions = [-1,1]   
         # check movement: UP - LEFT & DOWN - RIGHT
         for i in Directions:
-            row = PieceRow + i
-            col = PieceCol + i
-            while row >= 0 and row <= 7 and col >= 0 and col <= 7:
-                if self.board[row][col] =='--':
-                    AllValidMoves.append(Move((PieceRow,PieceCol),(row,col),self.board))
-                else:
-                    if PieceColor == self.Turn:
-                        break
-                    else:
-                        AllValidMoves.append(Move((PieceRow,PieceCol),(row,col),self.board))
-                        break
-                row = row + i  
-                col = col + i
+            BreakFlag  = False
+            CheckRow = PieceRow + i
+            CheckCol = PieceCol + i
+            while (CheckRow >= 0 and CheckRow <= 7 and CheckCol >= 0 and CheckCol <= 7) and (not BreakFlag):
+                BreakFlag = self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
+                CheckRow = CheckRow + i  
+                CheckCol = CheckCol + i
         # check movement: UP - RIGHT & DOWN - LEFT
-        for i in Directions:                
-            row = PieceRow + i
-            col = PieceCol - i
-            while row >= 0 and row <= 7 and col >= 0 and col <= 7:
-                if self.board[row][col] =='--':
-                    AllValidMoves.append(Move((PieceRow,PieceCol),(row,col),self.board))
-                else:
-                    if PieceColor == self.Turn:
-                        break
-                    else:
-                        AllValidMoves.append(Move((PieceRow,PieceCol),(row,col),self.board))
-                        break
-                row = row + i  
-                col = col - i
+        for i in Directions:  
+            BreakFlag  = False              
+            CheckRow = PieceRow + i
+            CheckCol = PieceCol - i
+            while (CheckRow >= 0 and CheckRow <= 7 and CheckCol >= 0 and CheckCol <= 7) and (not BreakFlag):
+                BreakFlag = self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
+                CheckRow = CheckRow + i  
+                CheckCol = CheckCol - i
     
     def KnightMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
-        pass  
+        Directions = [-1,1]         
+        # check movement: UP & DOWN
+        for j in Directions:
+            CheckRow = PieceRow
+            CheckCol = PieceCol + 2*j
+            for i in Directions:
+                CheckRow = PieceRow + i
+                if CheckRow >= 0 and CheckRow <= 7 and CheckCol >= 0 and CheckCol <= 7: 
+                    self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)        
+        # check movement: RIGHT & LEFT
+        for j in Directions:
+            CheckCol = PieceCol
+            CheckRow = PieceRow + 2*j
+            for i in Directions:
+                CheckCol = PieceCol + i
+                if CheckRow >= 0 and CheckRow <= 7 and CheckCol >= 0 and CheckCol <= 7: 
+                    self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)   
     
 class Move():
 
@@ -167,7 +220,9 @@ class Move():
         self.PieceCaptured = board[self.EndRow][self.EndCol]
         # ----------- calculate move ID ---------- #
         self.moveID = self.StartRow * 1000 + self.StartCol * 100 + self.EndRow * 10 + self.EndCol
-
+        # ----------- calculate move ID ---------- #
+        self.PawnPromotion = (self.PieceMoved == 'W_P' and self.EndRow == 0) or \
+                             (self.PieceMoved == 'B_P' and self.EndRow == 7)
     # ----------- implement comparison method for this class ---------- #    
     # note that this method is necessary to compare the objects of this class
     def __eq__(self, other):
