@@ -38,7 +38,7 @@ def main():
     RunningFlag    = True
     MoveMade       = False
     ClickedSquares = []  # two tuples [(6,4) (4,4)]
-    SelectedSquare = ()
+    SelectedSquare = ()  # single tuples (6,4) 
     # --------- calculate all inital valid moves --------- #
     AllValidMoves = GameState.CalculateAllMoves()
     # -------------------- start game -------------------- #
@@ -48,32 +48,36 @@ def main():
                 RunningFlag = False         # set flag
             elif Event.type == pygame.MOUSEBUTTONDOWN:     # if user clicks on the board
                 ClickLocation = pygame.mouse.get_pos()     # get click coords
-                col = ClickLocation[0]//SqSize             # determing row & col
+                col = ClickLocation[0]//SqSize             # determine row & col
                 row = ClickLocation[1]//SqSize   
-                
-                if SelectedSquare == (row,col) or col >= 8:
+                # following checks are necessary to correctly identify the start & end
+                # squares for a piece to move
+                #
+                # ignore click if previously clicked square or outside board boundary
+                if SelectedSquare == (row,col) or col >= 8: 
                     SelectedSquare = ()
                     ClickedSquares = []
+                # ignore click if it is the first click on an empty square    
                 elif len(ClickedSquares) < 1 and GameState.board[row][col] == '--':
                     SelectedSquare = ()
                     ClickedSquares = []                   
                 else:
                     SelectedSquare = (row,col)
                     ClickedSquares.append(SelectedSquare)        # add to the list of clicked squares
-    
-                if len(ClickedSquares) == 2:                     # if user clicks 2nd time
+                # if two selected squares are registeredd correctly
+                if len(ClickedSquares) == 2:                     
                     SelectedMove = ChessEngine.Move(ClickedSquares[0],ClickedSquares[1],GameState.board)       
                     for i in range(len(AllValidMoves)):          # check if selected move is a legal move
                         if SelectedMove == AllValidMoves[i]:
                             GameState.MakeMove(SelectedMove)     # if so, make the move
                             ClickedSquares = []                  # set clicked squares back to empty
-                            MoveMade = True
-                    if not MoveMade:
-                        ClickedSquares = [SelectedSquare]
-            elif Event.type == pygame.KEYDOWN:     # if user clicks on the board
-                if Event.key == pygame.K_z:
-                    GameState.UndoMove()
-                    MoveMade = True
+                            MoveMade = True                      # set flag
+                    if not MoveMade:                             # if not a legal move
+                        ClickedSquares = [SelectedSquare]        # then ignore last clicked (2nd square)
+            elif Event.type == pygame.KEYDOWN:                   # if user presses a key
+                if Event.key == pygame.K_z:                      # if pressed key is "z"
+                    GameState.UndoMove()                         # undo last move
+                    MoveMade = True                              # set flag
 
         # -------------------- stop game if check mate -------------------- #                       
         if GameState.CheckMate:
@@ -87,25 +91,25 @@ def main():
          # ----------- calculate new valid moves after move is made-------- #   
         if MoveMade:
             AllValidMoves = GameState.CalculateAllMoves()     # update list of valid moves
-            MoveMade = False                                  # update flag
-        
-        
+            MoveMade = False                                  # update flag       
+  
+# -------------------------------------------------------- #
+#         function to highlight legal moves on board       #
+# -------------------------------------------------------- #  
         
 def HighlightSquares(screen,GameState,AllValidMoves,SelectedSquare):
-    if SelectedSquare != ():
-        row,col = SelectedSquare
-        SelectedPieceColor = GameState.board[row][col][0]
+    if SelectedSquare != ():                                  # check at least one move is made
+        row,col = SelectedSquare                              # get row & col of last selected square
+        SelectedPieceColor = GameState.board[row][col][0]     
         if SelectedPieceColor == GameState.Turn:
-            # highlight selected square
-            s = pygame.Surface((SqSize,SqSize))
-            s.set_alpha(100)  # transparency value -> 0 for transparent
-            s.fill(pygame.Color('blue'))
-            screen.blit(s,(col*SqSize,row*SqSize))
-            # highlight moves
-            s.fill(pygame.Color('yellow'))
-            for move in AllValidMoves:
-                if move.StartRow == row and move.StartCol == col:
-                    screen.blit(s,(SqSize*move.EndCol,SqSize*move.EndRow))  
+            Surface = pygame.Surface((SqSize,SqSize))               # 
+            Surface.set_alpha(100)                                  # transparency value -> 0 for transparent
+            Surface.fill(pygame.Color('blue'))                   
+            screen.blit(Surface,(col*SqSize,row*SqSize)) 
+            Surface.fill(pygame.Color('yellow'))
+            for move in AllValidMoves:                              # loop over all legal moves
+                if move.StartRow == row and move.StartCol == col:   # if move starts from selected square
+                    screen.blit(Surface,(SqSize*move.EndCol,SqSize*move.EndRow))  # then highlight the move square
                             
 # -------------------------------------------------------- #
 #                 draw game state function                 #

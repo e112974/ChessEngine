@@ -32,24 +32,24 @@ class GameState():
     # ---------------------------------------------------- #
     
     def MakeMove(self,Move):
-        self.board[Move.StartRow][Move.StartCol] = "--"
-        self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved
-        self.MoveLog.append(Move)
-        self.Turn = 'B' if self.Turn == 'W' else 'W'
+        self.board[Move.StartRow][Move.StartCol] = "--"                     # set the start square to empty 
+        self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved              # set the final square to the moved piece
+        self.MoveLog.append(Move)                                           # add move to the log
+        self.Turn = 'B' if self.Turn == 'W' else 'W'                        # update turn ('W' or 'B')
         # pawn promotion
         if Move.PawnPromotion:
-            self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved[0] + '_Q'
+            self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved[0] + '_Q'    # change promoted pawn to queen
         
     # ---------------------------------------------------- #
     #                  UndoMove function                   #
     # ---------------------------------------------------- #
     
     def UndoMove(self):
-        if len(self.MoveLog) != 0:
-            move = self.MoveLog.pop()
-            self.board[move.StartRow][move.StartCol] = move.PieceMoved
-            self.board[move.EndRow][move.EndCol] = move.PieceCaptured
-            self.Turn = 'B' if self.Turn == 'W' else 'W'
+        if len(self.MoveLog) != 0:                                       # check at least one move is made 
+            move = self.MoveLog.pop()                                    # drop last move from log
+            self.board[move.StartRow][move.StartCol] = move.PieceMoved   # change start square to moved piece
+            self.board[move.EndRow][move.EndCol] = move.PieceCaptured    # change final square to empty or captured piece
+            self.Turn = 'B' if self.Turn == 'W' else 'W'                 # update turn
        
     # ---------------------------------------------------- #
     #          Update list of valid moves function         #
@@ -65,17 +65,42 @@ class GameState():
                     Piece      = self.board[row][col][2]
                     PieceColor = self.board[row][col][0]
                     if PieceColor == self.Turn:
+                        # following line executes the function which calculates the moves
+                        # for the current piece type (function is retrieved using dictionary
+                        # defined above)
                         self.MoveFunctions[Piece](PieceColor,row,col,AllValidMoves)
         return AllValidMoves
     
     # ---------------------------------------------------- #
-    #      Calculate Moves for each piece function         #
+    #      Calculate Moves for each piece                  #
     # ---------------------------------------------------- #
     
+    # --------------- check the target square function --------------- #
+    # this function is called within loops of move functions for every piece
+    def CheckSquare(self,PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves):
+        # this flag is used to break the loop within the move functions
+        BreakFlag = False
+        TargetPieceColor = self.board[CheckRow][CheckCol][0]
+        # if target square is empty -> it is a legal move
+        if self.board[CheckRow][CheckCol] == '--':
+            AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
+        # if target square is not empty, then the move is only legal if target piece is 
+        # opposite color
+        else:
+            # if target square has a piece of same color, then move is illegal
+            if PieceColor != TargetPieceColor:
+                AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
+            # set flag to true to finish the loop in move function    
+            BreakFlag = True
+        return BreakFlag
+    
     def PawnMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
-        Direction = -1 if self.Turn == 'W' else 1
-        # check movement: UP & DOWN
-        CheckCol = PieceCol
+        # moving direction is up (i.e. -1, since rows decrease as going up) for 'W'
+        # and down for 'B'
+        Direction = -1 if self.Turn == 'W' else 1 
+        CheckCol = PieceCol     
+        # if first move of pawn, then they can jump double, this is assigned
+        # by calling the function twice and incrementing the row in between the calls
         if (self.Turn == 'W' and PieceRow == 6) or (self.Turn == 'B' and PieceRow == 1):
             CheckRow = PieceRow + Direction
             self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
@@ -91,8 +116,11 @@ class GameState():
         for i in Directions:
             CheckCol = PieceCol + i
             CheckRow = PieceRow + Direction
+            # check that target square is within bounds
             if CheckRow >= 0 and CheckRow <= 7 and CheckCol >= 0 and CheckCol <= 7: 
+                # check color of captured piece
                 TargetPieceColor = self.board[CheckRow][CheckCol][0]
+                # if target square is not empty & piece is opposite color
                 if (TargetPieceColor != '-') and (PieceColor != TargetPieceColor):
                     AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
             
@@ -122,20 +150,7 @@ class GameState():
             CheckCol = PieceCol - i
             if CheckRow >= 0 and CheckRow <= 7 and CheckCol >= 0 and CheckCol <= 7:
                 self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
-    
-    def CheckSquare(self,PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves):
-        BreakFlag = False
-        TargetPieceColor = self.board[CheckRow][CheckCol][0]
-        if self.board[CheckRow][CheckCol] == '--':
-            AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
-        else:
-            if PieceColor == TargetPieceColor:
-                BreakFlag = True
-            else:
-                AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
-                BreakFlag = True
-        return BreakFlag
-            
+         
     def RookMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
         Directions = [-1,1]     
         # check movement: UP & DOWN
