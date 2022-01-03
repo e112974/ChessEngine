@@ -8,12 +8,13 @@ class GameState():
             ["B_R","B_N","B_B","B_Q","B_K","B_B","B_N","B_R"],
             ["B_P","B_P","B_P","B_P","B_P","B_P","B_P","B_P"],
             ["--", "--", "--", "--", "--", "--", "--", "--"],
-            ["--", "--", "--", "--", "--", "--", "--", "--"],
-            ["--", "--", "W_R", "--", "--", "--", "--", "--"],
+            ["--", "--", "--", "--", "--", "B_Q", "--", "--"],
+            ["--", "--", "W_Q", "--", "--", "--", "--", "--"],
             ["--", "--", "--", "--", "--", "--", "--", "--"],
             ["W_P","W_P","W_P","W_P","W_P","W_P","W_P","W_P"],
             ["W_R","W_N","W_B","W_Q","W_K","W_B","W_N","W_R"],
         ]
+        # set properties
         self.Turn         = 'W'
         self.MoveLog      = []
         self.CheckMate    = False
@@ -21,14 +22,21 @@ class GameState():
         self.WhiteCastled = False
         self.BlackCastled = False
         self.KingInCheck  = False
-
+        # set move functions dictionary
+        self.MoveFunctions = {'P': self.PawnMoves,   'R': self.RookMoves,
+                              'B': self.BishopMoves, 'N': self.KnightMoves,
+                              'K': self.KingMoves,   'Q': self.QueenMoves}
+        
     # ---------------------------------------------------- #
     #                  MovePiece function                  #
     # ---------------------------------------------------- #
     
-    def MakeMove(self,SelectedMove):
-        pass
- 
+    def MakeMove(self,Move):
+        self.board[Move.StartRow][Move.StartCol] = "--"
+        self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved
+        self.MoveLog.append(Move)
+        self.Turn = 'B' if self.Turn == 'W' else 'W'
+        
     # ---------------------------------------------------- #
     #                  UndoMove function                   #
     # ---------------------------------------------------- #
@@ -37,7 +45,7 @@ class GameState():
         pass
        
     # ---------------------------------------------------- #
-    #              CalculateAllMoves function              #
+    #          Update list of valid moves function         #
     # ---------------------------------------------------- #
     
     def CalculateAllMoves(self):
@@ -50,21 +58,13 @@ class GameState():
                     Piece      = self.board[row][col][2]
                     PieceColor = self.board[row][col][0]
                     if PieceColor == self.Turn:
-                        self.CalculatePieceMoves(Piece,PieceColor,row,col,AllValidMoves)
+                        self.MoveFunctions[Piece](PieceColor,row,col,AllValidMoves)
         return AllValidMoves
     
-    def CalculatePieceMoves(self,Piece,PieceColor,PieceRow,PieceCol,AllValidMoves):
-        col = PieceCol + 1
-        while col < len(self.board) - 1:
-            if self.board[PieceRow][col][0] == PieceColor:
-                break
-            elif self.board[PieceRow][col] == '--':
-                AllValidMoves.append(Move((PieceRow,PieceCol),(PieceRow,col),self.board)) 
-            else: 
-                AllValidMoves.append(Move((PieceRow,PieceCol),(PieceRow,col),self.board))
-                break
-            col += 1
-
+    # ---------------------------------------------------- #
+    #      Calculate Moves for each piece function         #
+    # ---------------------------------------------------- #
+    
     def PawnMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
         pass
     
@@ -72,13 +72,76 @@ class GameState():
         pass
     
     def RookMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
-        pass
-     
+        # -----------------------        
+        # Moves for ROOK
+        # -----------------------
+        Directions = [-1,1]         
+        # check movement: UP & DOWN
+        for i in Directions:
+            row = PieceRow + i
+            while row >= 0 and row <= 7: 
+                if self.board[row][PieceCol] == '--':
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(row,PieceCol),self.board))
+                else:
+                    if PieceColor == self.Turn:
+                        break
+                    else:
+                        AllValidMoves.append(Move((PieceRow,PieceCol),(row,PieceCol),self.board))
+                        break
+                row = row + i  
+        # check movement: LEFT & RIGHT
+        for i in Directions:
+            col = PieceCol + i
+            while col >= 0 and col <= 7:
+                if self.board[PieceRow][col] == '--':
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(PieceRow,col),self.board))
+                else:
+                    if PieceColor == self.Turn:
+                        break
+                    else:
+                        AllValidMoves.append(Move((PieceRow,PieceCol),(PieceRow,col),self.board))
+                        break
+                col = col + i 
+                 
     def QueenMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
-        pass
-       
+        self.BishopMoves(PieceColor,PieceRow,PieceCol,AllValidMoves)
+        self.RookMoves(PieceColor,PieceRow,PieceCol,AllValidMoves)
+        
     def BishopMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
-        pass  
+        # -----------------------        
+        # Moves for BISHOP
+        # -----------------------
+        Directions = [-1,1]   
+        # check movement: UP - LEFT & DOWN - RIGHT
+        for i in Directions:
+            row = PieceRow + i
+            col = PieceCol + i
+            while row >= 0 and row <= 7 and col >= 0 and col <= 7:
+                if self.board[row][col] =='--':
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(row,col),self.board))
+                else:
+                    if PieceColor == self.Turn:
+                        break
+                    else:
+                        AllValidMoves.append(Move((PieceRow,PieceCol),(row,col),self.board))
+                        break
+                row = row + i  
+                col = col + i
+        # check movement: UP - RIGHT & DOWN - LEFT
+        for i in Directions:                
+            row = PieceRow + i
+            col = PieceCol - i
+            while row >= 0 and row <= 7 and col >= 0 and col <= 7:
+                if self.board[row][col] =='--':
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(row,col),self.board))
+                else:
+                    if PieceColor == self.Turn:
+                        break
+                    else:
+                        AllValidMoves.append(Move((PieceRow,PieceCol),(row,col),self.board))
+                        break
+                row = row + i  
+                col = col - i
     
     def KnightMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
         pass  

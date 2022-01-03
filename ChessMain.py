@@ -38,6 +38,7 @@ def main():
     RunningFlag    = True
     MoveMade       = False
     ClickedSquares = []  # two tuples [(6,4) (4,4)]
+    SelectedSquare = ()
     # --------- calculate all inital valid moves --------- #
     AllValidMoves = GameState.CalculateAllMoves()
     # -------------------- start game -------------------- #
@@ -49,8 +50,21 @@ def main():
                 ClickLocation = pygame.mouse.get_pos()     # get click coords
                 col = ClickLocation[0]//SqSize             # determing row & col
                 row = ClickLocation[1]//SqSize   
-                ClickedSquares.append((row,col))             # add to the list of clicked squares
-                print('Clicked Square is row={0}, col={1}'.format(row,col))   
+                
+                if SelectedSquare == (row,col) or col >= 8:
+                    SelectedSquare = ()
+                    ClickedSquares = []
+                elif len(ClickedSquares) < 1 and GameState.board[row][col] == '--':
+                    SelectedSquare = ()
+                    ClickedSquares = []                   
+                else:
+                    SelectedSquare = (row,col)
+                    ClickedSquares.append(SelectedSquare)        # add to the list of clicked squares
+                    
+                for i in range(len(ClickedSquares)):       
+                    print('Clicked Square # {0} is {1}'.format(i+1,ClickedSquares[i]))    
+                print('')      
+                           
                 if len(ClickedSquares) == 2:                     # if user clicks 2nd time
                     SelectedMove = ChessEngine.Move(ClickedSquares[0],ClickedSquares[1],GameState.board)       
                     for i in range(len(AllValidMoves)):          # check if selected move is a legal move
@@ -58,12 +72,22 @@ def main():
                             GameState.MakeMove(SelectedMove)     # if so, make the move
                             ClickedSquares = []                  # set clicked squares back to empty
                             MoveMade = True
-                            
+                    if not MoveMade:
+                        ClickedSquares = [SelectedSquare]
+    
+        # -------------------- stop game if check mate -------------------- #                       
         if GameState.CheckMate:
             RunningFlag = False
+            
+        # -------------------- draw updated game board status  ------------ #    
         DrawGameState(Screen,GameState,MoveLogFont)
+               
         pygame.display.flip()
-           
+        
+         # ----------- calculate new valid moves after move is made-------- #   
+        if MoveMade:
+            AllValidMoves = GameState.CalculateAllMoves()     # update list of valid moves
+            MoveMade = False                                  # update flag
         
 # -------------------------------------------------------- #
 #                 draw game state function                 #
