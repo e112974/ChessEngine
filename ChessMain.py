@@ -41,15 +41,19 @@ def main():
     SelectedSquare = ()  # single tuples (6,4) 
     # --------- calculate all inital valid moves --------- #
     AllValidMoves = GameState.CalculateAllMoves()
-    # -------------------- start game -------------------- #
+    
+    # -------------------------------------------------------- #
+    #         MAIN LOOP - RUNNING GAME                         #
+    # -------------------------------------------------------- #  
     while RunningFlag:
         for Event in pygame.event.get():    # check the mouse clicks
             if Event.type == pygame.QUIT:   # if user clicks quit
                 RunningFlag = False         # set flag
+            # --------- MOUSE CLICKED --------- #
             elif Event.type == pygame.MOUSEBUTTONDOWN:     # if user clicks on the board
                 ClickLocation = pygame.mouse.get_pos()     # get click coords
                 col = ClickLocation[0]//SqSize             # determine row & col
-                row = ClickLocation[1]//SqSize   
+                row = ClickLocation[1]//SqSize
                 # following checks are necessary to correctly identify the start & end
                 # squares for a piece to move
                 #
@@ -64,7 +68,7 @@ def main():
                 else:
                     SelectedSquare = (row,col)
                     ClickedSquares.append(SelectedSquare)        # add to the list of clicked squares
-                # if two selected squares are registeredd correctly
+                # if two selected squares are registered correctly
                 if len(ClickedSquares) == 2:                     
                     SelectedMove = ChessEngine.Move(ClickedSquares[0],ClickedSquares[1],GameState.board)       
                     for i in range(len(AllValidMoves)):          # check if selected move is a legal move
@@ -74,20 +78,25 @@ def main():
                             MoveMade = True                      # set flag
                     if not MoveMade:                             # if not a legal move
                         ClickedSquares = [SelectedSquare]        # then ignore last clicked (2nd square)
+            # --------- KEY PRESSED --------- #
             elif Event.type == pygame.KEYDOWN:                   # if user presses a key
-                if Event.key == pygame.K_z:                      # if pressed key is "z"
+                # Undo Last Move 
+                if Event.key == pygame.K_z:                      # if pressed key is "z"           
                     GameState.UndoMove()                         # undo last move
                     MoveMade = True                              # set flag
-
+                # Reset board
+                if Event.key == pygame.K_r:                      # if pressed key is "r"
+                    GameState = ChessEngine.GameState()
+                    AllValidMoves = GameState.CalculateAllMoves()
+                    SelectedSquare = ()
+                    ClickedSquares = []  
+                    MoveMade = False         
         # -------------------- stop game if check mate -------------------- #                       
         if GameState.CheckMate:
             RunningFlag = False
-            
         # -------------------- draw updated game board status  ------------ #    
-        DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont)
-               
+        DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont)  
         pygame.display.flip()
-        
          # ----------- calculate new valid moves after move is made-------- #   
         if MoveMade:
             AllValidMoves = GameState.CalculateAllMoves()     # update list of valid moves
