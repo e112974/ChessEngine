@@ -35,10 +35,17 @@ class GameState():
         self.board[Move.StartRow][Move.StartCol] = "--"                     # set the start square to empty 
         self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved              # set the final square to the moved piece
         self.MoveLog.append(Move)                                           # add move to the log
-        self.Turn = 'B' if self.Turn == 'W' else 'W'                        # update turn ('W' or 'B')
+        self.Turn = 'B' if self.Turn == 'W' else 'W'                        # update turn ('W' or 'B')     
         # pawn promotion
         if Move.PawnPromotion:
             self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved[0] + '_Q'    # change promoted pawn to queen
+        # if king is in check
+        if self.KingInCheck:
+            AllValidMoves = self.CalculateAllMoves()
+            if self.KingInCheck:
+                self.UndoMove()
+
+      
         
     # ---------------------------------------------------- #
     #                  UndoMove function                   #
@@ -56,19 +63,22 @@ class GameState():
     # ---------------------------------------------------- #
     
     def CalculateAllMoves(self):
-        # --------------- initialize array --------------- #
-        AllValidMoves = []
+        # --------------- initialize variables --------------- #
+        AllValidMoves    = []
+        self.KingInCheck = False
         # ----- loop over rows and cols on the board ----- #
         for row in range(len(self.board)):
             for col in range(len(self.board)):
                 if self.board[row][col] != '--':
                     Piece      = self.board[row][col][2]
                     PieceColor = self.board[row][col][0]
-                    if PieceColor == self.Turn:
-                        # following line executes the function which calculates the moves
-                        # for the current piece type (function is retrieved using dictionary
-                        # defined above)
-                        self.MoveFunctions[Piece](PieceColor,row,col,AllValidMoves)
+                    # following line executes the function which calculates the moves
+                    # for the current piece type (function is retrieved using dictionary
+                    # defined above)
+                    #
+                    # also note that the valid moves are calculated for both sides, this is
+                    # necessary to determine if the king is in check or not
+                    self.MoveFunctions[Piece](PieceColor,row,col,AllValidMoves)
         return AllValidMoves
     
     # ---------------------------------------------------- #
@@ -80,16 +90,20 @@ class GameState():
     def CheckSquare(self,PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves):
         # this flag is used to break the loop within the move functions
         BreakFlag = False
+        MovingPiece = self.board[PieceRow][PieceCol]
         TargetPieceColor = self.board[CheckRow][CheckCol][0]
         # if target square is empty -> it is a legal move
         if self.board[CheckRow][CheckCol] == '--':
             AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
-        # if target square is not empty, then the move is only legal if target piece is 
-        # opposite color
         else:
-            # if target square has a piece of same color, then move is illegal
+            # if target square is not empty, then the move is only legal if target piece is 
+            # opposite color
             if PieceColor != TargetPieceColor:
                 AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
+                # check if the attacked piece is king
+                TargetPiece = self.board[CheckRow][CheckCol][2]
+                if TargetPiece == 'K':
+                    self.KingInCheck = True
             # set flag to true to finish the loop in move function    
             BreakFlag = True
         return BreakFlag

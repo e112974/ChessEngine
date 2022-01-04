@@ -69,23 +69,31 @@ def main():
                     SelectedSquare = (row,col)
                     ClickedSquares.append(SelectedSquare)        # add to the list of clicked squares
                 # if two selected squares are registered correctly
-                if len(ClickedSquares) == 2:                     
-                    SelectedMove = ChessEngine.Move(ClickedSquares[0],ClickedSquares[1],GameState.board)       
-                    for i in range(len(AllValidMoves)):          # check if selected move is a legal move
-                        if SelectedMove == AllValidMoves[i]:
-                            GameState.MakeMove(SelectedMove)     # if so, make the move
-                            ClickedSquares = []                  # set clicked squares back to empty
-                            MoveMade = True                      # set flag
-                    if not MoveMade:                             # if not a legal move
-                        ClickedSquares = [SelectedSquare]        # then ignore last clicked (2nd square)
+                if len(ClickedSquares) == 2:     
+                    StartSquare  = ClickedSquares[0]
+                    EndSquare    = ClickedSquares[1]                
+                    SelectedMove = ChessEngine.Move(StartSquare,EndSquare,GameState.board)      
+                    MovingPiece  = GameState.board[StartSquare[0]][StartSquare[1]]
+                    MovingPieceColor = MovingPiece[0]
+                    # we check the turn here rather than when calculating the valid moves
+                    # since valid moves for both colors need to be calculated to determine
+                    # if king is in check or not
+                    if MovingPieceColor == GameState.Turn:
+                        for i in range(len(AllValidMoves)):          # check if selected move is a legal move
+                            if SelectedMove == AllValidMoves[i]:
+                                GameState.MakeMove(SelectedMove)     # if so, make the move
+                                ClickedSquares = []                  # set clicked squares back to empty
+                                MoveMade = True                      # set flag
+                    if not MoveMade:                                 # if not a legal move
+                        ClickedSquares = [SelectedSquare]            # then ignore last clicked (2nd square)
             # --------- KEY PRESSED --------- #
-            elif Event.type == pygame.KEYDOWN:                   # if user presses a key
+            elif Event.type == pygame.KEYDOWN:                       # if user presses a key
                 # Undo Last Move 
-                if Event.key == pygame.K_z:                      # if pressed key is "z"           
-                    GameState.UndoMove()                         # undo last move
-                    MoveMade = True                              # set flag
+                if Event.key == pygame.K_z:                          # if pressed key is "z"           
+                    GameState.UndoMove()                             # undo last move
+                    MoveMade = True                                  # set flag
                 # Reset board
-                if Event.key == pygame.K_r:                      # if pressed key is "r"
+                if Event.key == pygame.K_r:                          # if pressed key is "r"
                     GameState = ChessEngine.GameState()
                     AllValidMoves = GameState.CalculateAllMoves()
                     SelectedSquare = ()
