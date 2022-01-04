@@ -36,12 +36,12 @@ def main():
     GameState = ChessEngine.GameState()
     # ---------- initialize variables -------------------- #
     RunningFlag    = True
+    GameOver       = False
     MoveMade       = False
     ClickedSquares = []  # two tuples [(6,4) (4,4)]
     SelectedSquare = ()  # single tuples (6,4) 
     # --------- calculate all inital valid moves --------- #
-    AllValidMoves = GameState.CalculateAllMoves()
-    
+    AllValidMoves = GameState.CalculateAllValidMoves()
     # -------------------------------------------------------- #
     #         MAIN LOOP - RUNNING GAME                         #
     # -------------------------------------------------------- #  
@@ -73,17 +73,11 @@ def main():
                     StartSquare  = ClickedSquares[0]
                     EndSquare    = ClickedSquares[1]                
                     SelectedMove = ChessEngine.Move(StartSquare,EndSquare,GameState.board)      
-                    MovingPiece  = GameState.board[StartSquare[0]][StartSquare[1]]
-                    MovingPieceColor = MovingPiece[0]
-                    # we check the turn here rather than when calculating the valid moves
-                    # since valid moves for both colors need to be calculated to determine
-                    # if king is in check or not
-                    if MovingPieceColor == GameState.Turn:
-                        for i in range(len(AllValidMoves)):          # check if selected move is a legal move
-                            if SelectedMove == AllValidMoves[i]:
-                                GameState.MakeMove(SelectedMove)     # if so, make the move
-                                ClickedSquares = []                  # set clicked squares back to empty
-                                MoveMade = True                      # set flag
+                    for i in range(len(AllValidMoves)):          # check if selected move is a legal move
+                        if SelectedMove == AllValidMoves[i]:
+                            GameState.MakeMove(SelectedMove)     # if so, make the move
+                            ClickedSquares = []                  # set clicked squares back to empty
+                            MoveMade = True                      # set flag
                     if not MoveMade:                                 # if not a legal move
                         ClickedSquares = [SelectedSquare]            # then ignore last clicked (2nd square)
             # --------- KEY PRESSED --------- #
@@ -99,16 +93,22 @@ def main():
                     SelectedSquare = ()
                     ClickedSquares = []  
                     MoveMade = False         
-        # -------------------- stop game if check mate -------------------- #                       
-        if GameState.CheckMate:
-            RunningFlag = False
         # -------------------- draw updated game board status  ------------ #    
         DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont)  
+        # -------------------- stop game if check mate -------------------- #                       
+        if GameState.CheckMate or GameState.StaleMate:
+            if GameState.CheckMate:
+                text = 'White Wins!!' if GameState.Turn == 'B' else 'Black Wins!!'
+            elif GameState.StaleMate:
+                text = 'It is a Draw!!'
+            ShowGameEndText(Screen,text)  
+            GameOver = True
+        # -------------------- show -------------------- # 
         pygame.display.flip()
          # ----------- calculate new valid moves after move is made-------- #   
         if MoveMade:
-            AllValidMoves = GameState.CalculateAllMoves()     # update list of valid moves
-            MoveMade = False                                  # update flag       
+            AllValidMoves = GameState.CalculateAllValidMoves()     # update list of valid moves
+            MoveMade = False                                       # update flag       
   
 # -------------------------------------------------------- #
 #         function to highlight legal moves on board       #
@@ -132,10 +132,11 @@ def HighlightSquares(screen,GameState,AllValidMoves,SelectedSquare):
 #                 draw game state function                 #
 # -------------------------------------------------------- #
 
-def DrawGameState(screen,GameState,AllValidMoves,SelectedSquare,moveLogFont):
-    DrawBoard(screen)
-    HighlightSquares(screen,GameState,AllValidMoves,SelectedSquare)
-    DrawPieces(screen,GameState.board)
+def DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont):
+    DrawBoard(Screen)
+    HighlightSquares(Screen,GameState,AllValidMoves,SelectedSquare)
+    DrawPieces(Screen,GameState.board)
+    DisplayMoveLog(Screen,GameState,MoveLogFont)
 
 # -------------------------------------------------------- #
 #                    draw board function                   #
@@ -160,7 +161,48 @@ def DrawPieces(screen,board):
                 screen.blit(PieceImages[piece],pygame.Rect(col*SqSize,row*SqSize,SqSize,SqSize))
 
 # -------------------------------------------------------- #
-#                         function                         #
+#           show result at the end of game                 #
+# -------------------------------------------------------- #
+
+def ShowGameEndText(Screen,text):
+    font = pygame.font.SysFont('Helvetica',128,True,False)
+    textObject = font.render(text,0,pygame.Color('Gray'))
+    textLocation = pygame.Rect(0,0,BoardWidth,BoardHeight).move(BoardWidth/2-textObject.get_width()/2, \
+                    BoardHeight/2-textObject.get_height()/2)
+    Screen.blit(textObject,textLocation)
+    textObject = font.render(text,0,pygame.Color('Black'))
+    Screen.blit(textObject,textLocation.move(2,2))
+    
+# -------------------------------------------------------- #
+#                    write move log                        #
+# -------------------------------------------------------- #
+    
+def DisplayMoveLog(Screen,GameState,font):
+    MoveLogRect = pygame.Rect(BoardWidth,0,MoveLogPanelWidth,MoveLogPanelHeight)
+    pygame.draw.rect(Screen,pygame.Color('black'),MoveLogRect)
+    MoveLog = GameState.MoveLog
+    MoveTexts = []
+    for i in range(0,len(MoveLog),2):
+        moveString = str(i//2 + 1) + '.' + ChessEngine.Move.ChessNotation(MoveLog[i]) + ' '
+        #if i+1 < len(MoveLog):  # make sure black made a move
+            #moveString += str(MoveLog[i+1])
+        MoveTexts.append(moveString)
+    movesPerRow = 3
+    padding = 5
+    lineSpacing = 1
+    textY = padding
+    for i in range(0,len(MoveTexts),movesPerRow):
+        text = ' '
+        for j in range(movesPerRow):
+            if i+j < len(MoveTexts):
+                text += MoveTexts[i+j] + '  '
+        textObject = font.render(text,True,pygame.Color('white'))
+        textLocation = MoveLogRect.move(padding,textY)
+        Screen.blit(textObject,textLocation)
+        textY += textObject.get_height() + lineSpacing
+        
+# -------------------------------------------------------- #
+#                    main function                         #
 # -------------------------------------------------------- #
 
 if __name__ == "__main__":
