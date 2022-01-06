@@ -2,6 +2,7 @@
 import ChessEngine
 import pygame
 import Players
+from MenuAndButtons import *
 
 # ----------------- set board dimensions ----------------- #
 BoardWidth = BoardHeight = 1024
@@ -42,6 +43,7 @@ def main():
     SelectedSquare = ()  # single tuples (6,4) 
     # --------- calculate all inital valid moves --------- #
     AllValidMoves = GameState.CalculateAllValidMoves()
+    b0 = Button((10, 10), "Click me now", 15, "red on yellow",command=on_click)
     # -------------------------------------------------------- #
     #         MAIN LOOP - RUNNING GAME                         #
     # -------------------------------------------------------- #  
@@ -103,6 +105,8 @@ def main():
                 text = 'It is a Draw!!'
             ShowGameEndText(Screen,text)  
             GameOver = True
+
+        b0.update()
         # -------------------- show -------------------- # 
         pygame.display.flip()
          # ----------- calculate new valid moves after move is made-------- #   
