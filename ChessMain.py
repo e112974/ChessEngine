@@ -2,11 +2,12 @@
 import ChessEngine
 import pygame
 import Players
+from pygame._sdl2.video import Window
 from MenuAndButtons import *
 
 # ----------------- set board dimensions ----------------- #
-BoardWidth = BoardHeight = 1024
-MoveLogPanelWidth        = 400
+BoardWidth = BoardHeight = 800
+MoveLogPanelWidth        = 200
 MoveLogPanelHeight       = BoardHeight
 Nrows = Ncols            = 8
 SqSize                   = BoardHeight // Nrows
@@ -18,16 +19,24 @@ for piece in pieces:
     PieceImages[piece] = pygame.transform.scale(
                          pygame.image.load('images/' + piece + '.png'),(SqSize,SqSize))
 
-
 # -------------------------------------------------------- #
-#                       main function                      #
+#                  define RunTheGame function              #
 # -------------------------------------------------------- #
+# note: defining the core script here as a function called "main"
+# enables using the functions defined below. If we did not do 
+# that it would execute the script from top to bottom without
+# first defining the function
+# in this way, it first just registers the function names, 
+# reaches to the bottom of this file and then the "__name__ == "__main__" "
+# part at the end runs this main function
 
-def main():
+def RunTheGame():
     # ----------------- initialize pygame ---------------- #
     pygame.init()
-    # -------------------- set screen -------------------- #
-    Screen = pygame.display.set_mode((BoardWidth+MoveLogPanelWidth,BoardHeight))
+    # -------------------- set game window -------------------- #
+    Screen = pygame.display.set_mode((BoardWidth+MoveLogPanelWidth,BoardHeight)) # set size of window
+    window = Window.from_display_module()   
+    window.position = (1400,300)   # set position of window
     Screen.fill(pygame.Color("white"))
     # --------------------- set clock -------------------- #
     Clock = pygame.time.Clock()
@@ -43,7 +52,10 @@ def main():
     SelectedSquare = ()  # single tuples (6,4) 
     # --------- calculate all inital valid moves --------- #
     AllValidMoves = GameState.CalculateAllValidMoves()
-    b0 = Button((10, 10), "Click me now", 15, "red on yellow",command=on_click)
+    # --------- create a button --------- #
+    ButtonWidth = 10
+    b0 = Button((BoardWidth + MoveLogPanelWidth/2,BoardHeight-30), \
+        "Click me now", ButtonWidth, "green on yellow",command=on_click)
     # -------------------------------------------------------- #
     #         MAIN LOOP - RUNNING GAME                         #
     # -------------------------------------------------------- #  
@@ -136,11 +148,11 @@ def HighlightSquares(screen,GameState,AllValidMoves,SelectedSquare):
 #                 draw game state function                 #
 # -------------------------------------------------------- #
 
-def DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont):
-    DrawBoard(Screen)
-    HighlightSquares(Screen,GameState,AllValidMoves,SelectedSquare)
-    DrawPieces(Screen,GameState.board)
-    DisplayMoveLog(Screen,GameState,MoveLogFont)
+def DrawGameState(screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont):
+    DrawBoard(screen)
+    HighlightSquares(screen,GameState,AllValidMoves,SelectedSquare)
+    DrawPieces(screen,GameState.board)
+    DisplayMoveLog(screen,GameState,MoveLogFont)
 
 # -------------------------------------------------------- #
 #                    draw board function                   #
@@ -168,22 +180,22 @@ def DrawPieces(screen,board):
 #           show result at the end of game                 #
 # -------------------------------------------------------- #
 
-def ShowGameEndText(Screen,text):
+def ShowGameEndText(screen,text):
     font = pygame.font.SysFont('Helvetica',128,True,False)
     textObject = font.render(text,0,pygame.Color('Gray'))
     textLocation = pygame.Rect(0,0,BoardWidth,BoardHeight).move(BoardWidth/2-textObject.get_width()/2, \
                     BoardHeight/2-textObject.get_height()/2)
-    Screen.blit(textObject,textLocation)
+    screen.blit(textObject,textLocation)
     textObject = font.render(text,0,pygame.Color('Black'))
-    Screen.blit(textObject,textLocation.move(2,2))
+    screen.blit(textObject,textLocation.move(2,2))
     
 # -------------------------------------------------------- #
 #                    write move log                        #
 # -------------------------------------------------------- #
     
-def DisplayMoveLog(Screen,GameState,font):
+def DisplayMoveLog(screen,GameState,font):
     MoveLogRect = pygame.Rect(BoardWidth,0,MoveLogPanelWidth,MoveLogPanelHeight)
-    pygame.draw.rect(Screen,pygame.Color('black'),MoveLogRect)
+    pygame.draw.rect(screen,pygame.Color('black'),MoveLogRect)
     MoveLog = GameState.MoveLog
     MoveTexts = []
     for i in range(0,len(MoveLog),2):
@@ -202,12 +214,11 @@ def DisplayMoveLog(Screen,GameState,font):
                 text += MoveTexts[i+j] + '  '
         textObject = font.render(text,True,pygame.Color('white'))
         textLocation = MoveLogRect.move(padding,textY)
-        Screen.blit(textObject,textLocation)
+        screen.blit(textObject,textLocation)
         textY += textObject.get_height() + lineSpacing
         
 # -------------------------------------------------------- #
-#                    main function                         #
+#              execute RunTheGame function                 #
 # -------------------------------------------------------- #
 
-if __name__ == "__main__":
-    main()
+RunTheGame()

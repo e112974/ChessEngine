@@ -132,7 +132,7 @@ class GameState():
         return False
     
     # ---------------------------------------------------- #
-    #      check the target square function                #
+    #      check if square is occupied function            #
     # ---------------------------------------------------- #
   
     def CheckSquare(self,PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves):
