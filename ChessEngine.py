@@ -21,8 +21,8 @@ class GameState():
         self.BlackKingLocation = (0,4)
         self.CheckMate         = False
         self.StaleMate         = False
-        self.WhiteCastled      = False
-        self.BlackCastled      = False
+        self.WhiteCanCastle    = True
+        self.BlackCanCastle    = True    
         # set move functions dictionary
         self.MoveFunctions = {'P': self.PawnMoves,   'R': self.RookMoves,
                               'B': self.BishopMoves, 'N': self.KnightMoves,
@@ -32,18 +32,49 @@ class GameState():
     #                  MovePiece function                  #
     # ---------------------------------------------------- #
     
-    def MakeMove(self,Move):
+    def MakeMove(self,Move,ActualMove):
         self.board[Move.StartRow][Move.StartCol] = "--"                     # set the start square to empty 
         self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved              # set the final square to the moved piece
         self.MoveLog.append(Move)                                           # add move to the log
-        self.Turn = 'B' if self.Turn == 'W' else 'W'  # update turn ('W' or 'B') 
+        self.Turn = 'B' if self.Turn == 'W' else 'W'                        # update turn ('W' or 'B') 
         # update king locations, this is later used within 
         # CheckAttackedSquare function to check if kings are
         # attacked after a move  
         if Move.PieceMoved == 'W_K':
             self.WhiteKingLocation = (Move.EndRow,Move.EndCol)
+            # check if the move of king was within a castle move
+            # if so move the rook as well
+            # ActualMove Flag is introduced to distinguish between trial moves
+            # and trial moves (moves tried to see if they are legal). If it is 
+            # a trial move, castling status is NOT updated and rook is not moved
+            if ActualMove:
+                if Move.StartRow == 7 and Move.StartCol == 4 and \
+                    Move.EndRow == 7 and Move.EndCol == 6:
+                    self.board[7][7]    = "--"
+                    self.board[7][5]    = "W_R"      
+                    self.WhiteCanCastle = False
+                    Move.CastleMove = True
+                if Move.StartRow == 7 and Move.StartCol == 4 and \
+                    Move.EndRow == 7 and Move.EndCol == 2:
+                    self.board[7][0]    = "--"
+                    self.board[7][3]    = "W_R"      
+                    self.WhiteCanCastle = False      
+                    Move.CastleMove = True             
         elif Move.PieceMoved == 'B_K':
-            self.BlackKingLocation = (Move.EndRow,Move.EndCol) 
+            self.BlackKingLocation = (Move.EndRow,Move.EndCol)       
+            if ActualMove:
+                if Move.StartRow == 0 and Move.StartCol == 4 and \
+                    Move.EndRow == 0 and Move.EndCol == 6:
+                    self.board[0][7]    = "--"
+                    self.board[0][5]    = "B_R"      
+                    self.BlackCanCastle = False
+                    Move.CastleMove = True  
+                if Move.StartRow == 0 and Move.StartCol == 4 and \
+                    Move.EndRow == 0 and Move.EndCol == 2:
+                    self.board[0][0]    = "--"
+                    self.board[0][3]    = "B_R"      
+                    self.BlackCanCastle = False  
+                    Move.CastleMove = True  
         # pawn promotion
         if Move.PawnPromotion:
             self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved[0] + '_Q'    # change promoted pawn to queen
@@ -81,6 +112,11 @@ class GameState():
                     # defined above)
                     if PieceColor == self.Turn:
                         self.MoveFunctions[Piece](PieceColor,row,col,AllPossibleMoves)
+        # check castle moves 
+        if self.WhiteCanCastle:
+            self.CastleMove('W',AllPossibleMoves)
+        if self.BlackCanCastle:
+            self.CastleMove('B',AllPossibleMoves)
         return AllPossibleMoves
     
     # ---------------------------------------------------- #
@@ -95,8 +131,9 @@ class GameState():
         # loop over all possible moves 
         # loop backwards using indices to be able to remove moves from list
         # using remove function 
+        ActualMoveFlag = False
         for i in range(len(AllPossibleMoves)-1,-1,-1):
-            self.MakeMove(AllPossibleMoves[i])                    
+            self.MakeMove(AllPossibleMoves[i],ActualMoveFlag)                    
             # now calculate all opponent moves
             OpponentMoves = self.CalculateAllPossibleMoves()    
             # get king's location depending on whose turn it is           
@@ -117,6 +154,52 @@ class GameState():
         if len(AllPossibleMoves) == 0:   # either checkmate or stalemate
             self.CheckMate = True           
         return AllPossibleMoves
+    
+    # ---------------------------------------------------- #
+    #          check castling move function                #
+    # ---------------------------------------------------- #   
+
+    def CastleMove(self,PieceColor,AllPossibleMoves):
+        # (rules for castling)
+        # The king and the rook may not have moved
+        # All spaces between the king and the rook must be empty
+        # The king cannot be in check
+        # The squares that the king passes over must not be under attack, nor the square where it lands on
+        #
+        # check for WHITE
+        if PieceColor == 'W':
+            # get white king position
+            PieceRow = self.WhiteKingLocation[0]
+            PieceCol = self.WhiteKingLocation[1]
+            # check short castle if rook on the right has not moved
+            if self.board[7][7] == 'W_R':    # check the piece on h8 square is white rook
+                if self.board[7][6] == '--' and self.board[7][5] == '--': # check if square between rock-king are empty 
+                    CheckRow = 7
+                    CheckCol = 6
+                    self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllPossibleMoves) 
+            # check long castle if rook on the left has not moved
+            if self.board[7][0] == 'W_R':    # check the piece on h8 square is white rook  
+                if self.board[7][1] == '--' and self.board[7][2] == '--' and self.board[7][3] == '--': # check if square between rock-king are empty 
+                    CheckRow = 7
+                    CheckCol = 2
+                    self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllPossibleMoves)        
+        # check for BLACK
+        if PieceColor == 'B':
+            # get black king position
+            PieceRow = self.BlackKingLocation[0]
+            PieceCol = self.BlackKingLocation[1]
+            # check short castle if rook on the right has not moved
+            if self.board[0][7] == 'B_R':    # check the piece on h1 square is black rook
+                if self.board[0][6] == '--' and self.board[0][5] == '--': # check if square between rock-king are empty 
+                    CheckRow = 0
+                    CheckCol = 6
+                    self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllPossibleMoves) 
+            # check long castle if rook on the left has not moved
+            if self.board[0][0] == 'B_R':    # check the piece on h8 square is black rook  
+                if self.board[0][1] == '--' and self.board[0][2] == '--' and self.board[0][3] == '--': # check if square between rock-king are empty 
+                    CheckRow = 0
+                    CheckCol = 2
+                    self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllPossibleMoves)  
     
     # ---------------------------------------------------- #
     #      check the target square function                #
@@ -155,7 +238,7 @@ class GameState():
     # ---------------------------------------------------- #
     #      Calculate Moves for each piece                  #
     # ---------------------------------------------------- #
-    
+        
     def PawnMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
         # moving direction is up (i.e. -1, since rows decrease as going up) for 'W'
         # and down for 'B'
@@ -171,7 +254,7 @@ class GameState():
             CheckRow = CheckRow + Direction
             TargetSquare = self.board[CheckRow][CheckCol]
             if (TargetSquare == '--'):
-                self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)           
+                self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)     
         else:
             CheckRow = PieceRow + Direction
             TargetSquare = self.board[CheckRow][CheckCol]
@@ -185,11 +268,41 @@ class GameState():
             CheckRow = PieceRow + Direction
             # check that target square is within bounds
             if CheckRow >= 0 and CheckRow <= 7 and CheckCol >= 0 and CheckCol <= 7: 
+                # note that we cannot use CheckSquare function here, since this function will allow 
+                # the move if the target square is emtpty. Pawns are a special case however, where
+                # they can move diagonally only if they can capture a piece. therefore the 
+                # CheckSquare function does not work here
+                #
                 # check color of captured piece
                 TargetPieceColor = self.board[CheckRow][CheckCol][0]
                 # if target square is not empty & piece is opposite color
                 if (TargetPieceColor != '-') and (PieceColor != TargetPieceColor):
                     AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
+        # check capturing piece: ENPASSANT        
+        if (self.Turn == 'W' and len(self.MoveLog) > 0 and self.MoveLog[-1].PieceMoved == 'B_P'):
+            if (self.MoveLog[-1].StartRow == 1 and self.MoveLog[-1].EndRow == 3):
+                if (PieceRow == 3 and self.MoveLog[-1].StartCol == PieceCol - 1):
+                    CheckCol = PieceCol - 1
+                    CheckRow = PieceRow - 1
+                    TargetSquare = self.board[CheckRow][CheckCol]
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board)) 
+                elif (PieceRow == 3 and self.MoveLog[-1].StartCol == PieceCol + 1):
+                    CheckCol = PieceCol + 1
+                    CheckRow = PieceRow - 1
+                    TargetSquare = self.board[CheckRow][CheckCol]
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))                  
+        elif (self.Turn == 'B' and len(self.MoveLog) > 0 and self.MoveLog[-1].PieceMoved == 'W_P'):
+            if (self.MoveLog[-1].StartRow == 6 and self.MoveLog[-1].EndRow == 4):
+                if (PieceRow == 4 and self.MoveLog[-1].StartCol == PieceCol - 1):
+                    CheckCol = PieceCol - 1
+                    CheckRow = PieceRow + 1
+                    TargetSquare = self.board[CheckRow][CheckCol]
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board)) 
+                elif (PieceRow == 4 and self.MoveLog[-1].StartCol == PieceCol + 1):
+                    CheckCol = PieceCol + 1
+                    CheckRow = PieceRow + 1
+                    TargetSquare = self.board[CheckRow][CheckCol]
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))   
             
     def KingMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
         Directions = [-1,1]   
@@ -317,7 +430,7 @@ class Move():
     def ChessNotation(self):
         # castle move
         if self.CastleMove:
-            return 'O-O' if self.endCol == 6 else 'O-O-O'
+            return 'O-O' if self.EndCol == 6 else 'O-O-O'
         EndSquare = self.getRankFile(self.EndRow,self.EndCol)
         # pawn moves
         if self.PieceMoved[2] == 'P':

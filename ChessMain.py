@@ -2,6 +2,7 @@
 import ChessEngine
 import pygame
 import Players
+from Utilities import *
 from pygame._sdl2.video import Window
 from MenuAndButtons import *
 
@@ -56,6 +57,8 @@ def RunTheGame():
     ButtonWidth = 10
     b0 = Button((BoardWidth + MoveLogPanelWidth/2,BoardHeight-30), \
         "Click me now", ButtonWidth, "green on yellow",command=on_click)
+    # --------- draw/update board --------- #      
+    DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont) 
     # -------------------------------------------------------- #
     #         MAIN LOOP - RUNNING GAME                         #
     # -------------------------------------------------------- #  
@@ -63,6 +66,8 @@ def RunTheGame():
         for Event in pygame.event.get():    # check the mouse clicks
             if Event.type == pygame.QUIT:   # if user clicks quit
                 RunningFlag = False         # set flag
+                # --------- draw/update board --------- #    
+                DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont) 
             # --------- MOUSE CLICKED --------- #
             elif Event.type == pygame.MOUSEBUTTONDOWN:     # if user clicks on the board
                 ClickLocation = pygame.mouse.get_pos()     # get click coords
@@ -89,11 +94,13 @@ def RunTheGame():
                     SelectedMove = ChessEngine.Move(StartSquare,EndSquare,GameState.board)      
                     for i in range(len(AllValidMoves)):          # check if selected move is a legal move
                         if SelectedMove == AllValidMoves[i]:
-                            GameState.MakeMove(SelectedMove)     # if so, make the move
-                            ClickedSquares = []                  # set clicked squares back to empty
-                            MoveMade = True                      # set flag
+                            GameState.MakeMove(SelectedMove,True)     # if so, make the move
+                            ClickedSquares = []                       # set clicked squares back to empty
+                            MoveMade = True                           # set flag
                     if not MoveMade:                                 # if not a legal move
                         ClickedSquares = [SelectedSquare]            # then ignore last clicked (2nd square)
+                # --------- draw/update board --------- #      
+                DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont) 
             # --------- KEY PRESSED --------- #
             elif Event.type == pygame.KEYDOWN:                       # if user presses a key
                 # Undo Last Move 
@@ -106,10 +113,10 @@ def RunTheGame():
                     AllValidMoves = GameState.CalculateAllMoves()
                     SelectedSquare = ()
                     ClickedSquares = []  
-                    MoveMade = False         
-        # -------------------- draw updated game board status  ------------ #    
-        DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont)  
-        # -------------------- stop game if check mate -------------------- #                       
+                    MoveMade = False   
+                # --------- draw/update board --------- #       
+                DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont) 
+        # --------- check if mate or stalemate --------- #                      
         if GameState.CheckMate or GameState.StaleMate:
             if GameState.CheckMate:
                 text = 'White Wins!!' if GameState.Turn == 'B' else 'Black Wins!!'
@@ -125,98 +132,7 @@ def RunTheGame():
         if MoveMade:
             AllValidMoves = GameState.CalculateAllValidMoves()     # update list of valid moves
             MoveMade = False                                       # update flag       
-  
-# -------------------------------------------------------- #
-#         function to highlight legal moves on board       #
-# -------------------------------------------------------- #  
-        
-def HighlightSquares(screen,GameState,AllValidMoves,SelectedSquare):
-    if SelectedSquare != ():                                  # check at least one move is made
-        row,col = SelectedSquare                              # get row & col of last selected square
-        SelectedPieceColor = GameState.board[row][col][0]     
-        if SelectedPieceColor == GameState.Turn:
-            Surface = pygame.Surface((SqSize,SqSize))               # 
-            Surface.set_alpha(100)                                  # transparency value -> 0 for transparent
-            Surface.fill(pygame.Color('blue'))                   
-            screen.blit(Surface,(col*SqSize,row*SqSize)) 
-            Surface.fill(pygame.Color('yellow'))
-            for move in AllValidMoves:                              # loop over all legal moves
-                if move.StartRow == row and move.StartCol == col:   # if move starts from selected square
-                    screen.blit(Surface,(SqSize*move.EndCol,SqSize*move.EndRow))  # then highlight the move square
-                            
-# -------------------------------------------------------- #
-#                 draw game state function                 #
-# -------------------------------------------------------- #
-
-def DrawGameState(screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont):
-    DrawBoard(screen)
-    HighlightSquares(screen,GameState,AllValidMoves,SelectedSquare)
-    DrawPieces(screen,GameState.board)
-    DisplayMoveLog(screen,GameState,MoveLogFont)
-
-# -------------------------------------------------------- #
-#                    draw board function                   #
-# -------------------------------------------------------- #
-        
-def DrawBoard(screen):
-    colors = [pygame.Color("white"), pygame.Color("brown")]
-    for row in range(Nrows):
-        for col in range(Nrows):
-            color = colors[((row+col) % 2)]
-            pygame.draw.rect(screen,color,pygame.Rect(col*SqSize,row*SqSize,SqSize,SqSize))
-
-# -------------------------------------------------------- #
-#                        draw pieces                       #
-# -------------------------------------------------------- #
-
-def DrawPieces(screen,board):
-    for row in range(Nrows):
-        for col in range(Nrows):
-            piece = board[row][col]
-            if piece != "--":
-                screen.blit(PieceImages[piece],pygame.Rect(col*SqSize,row*SqSize,SqSize,SqSize))
-
-# -------------------------------------------------------- #
-#           show result at the end of game                 #
-# -------------------------------------------------------- #
-
-def ShowGameEndText(screen,text):
-    font = pygame.font.SysFont('Helvetica',128,True,False)
-    textObject = font.render(text,0,pygame.Color('Gray'))
-    textLocation = pygame.Rect(0,0,BoardWidth,BoardHeight).move(BoardWidth/2-textObject.get_width()/2, \
-                    BoardHeight/2-textObject.get_height()/2)
-    screen.blit(textObject,textLocation)
-    textObject = font.render(text,0,pygame.Color('Black'))
-    screen.blit(textObject,textLocation.move(2,2))
-    
-# -------------------------------------------------------- #
-#                    write move log                        #
-# -------------------------------------------------------- #
-    
-def DisplayMoveLog(screen,GameState,font):
-    MoveLogRect = pygame.Rect(BoardWidth,0,MoveLogPanelWidth,MoveLogPanelHeight)
-    pygame.draw.rect(screen,pygame.Color('black'),MoveLogRect)
-    MoveLog = GameState.MoveLog
-    MoveTexts = []
-    for i in range(0,len(MoveLog),2):
-        moveString = str(i//2 + 1) + '.' + ChessEngine.Move.ChessNotation(MoveLog[i]) + ' '
-        #if i+1 < len(MoveLog):  # make sure black made a move
-            #moveString += str(MoveLog[i+1])
-        MoveTexts.append(moveString)
-    movesPerRow = 3
-    padding = 5
-    lineSpacing = 1
-    textY = padding
-    for i in range(0,len(MoveTexts),movesPerRow):
-        text = ' '
-        for j in range(movesPerRow):
-            if i+j < len(MoveTexts):
-                text += MoveTexts[i+j] + '  '
-        textObject = font.render(text,True,pygame.Color('white'))
-        textLocation = MoveLogRect.move(padding,textY)
-        screen.blit(textObject,textLocation)
-        textY += textObject.get_height() + lineSpacing
-        
+         
 # -------------------------------------------------------- #
 #              execute RunTheGame function                 #
 # -------------------------------------------------------- #
