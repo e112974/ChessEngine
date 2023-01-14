@@ -15,14 +15,16 @@ class GameState():
             ["W_R","W_N","W_B","W_Q","W_K","W_B","W_N","W_R"],
         ]
         # set properties
-        self.Turn              = 'W'
-        self.MoveLog           = []
-        self.WhiteKingLocation = (7,4)
-        self.BlackKingLocation = (0,4)
-        self.CheckMate         = False
-        self.StaleMate         = False
-        self.WhiteCanCastle    = True
-        self.BlackCanCastle    = True    
+        self.Turn                    = 'W'
+        self.MoveLog                 = []
+        self.WhiteKingLocation       = (7,4)
+        self.BlackKingLocation       = (0,4)
+        self.CheckMate               = False
+        self.StaleMate               = False
+        self.WhiteCanCastleKingSide  = True
+        self.WhiteCanCastleQueenSide = True
+        self.BlackCanCastleKingSide  = True    
+        self.BlackCanCastleQueenSide = True  
         # set move functions dictionary
         self.MoveFunctions = {'P': self.PawnMoves,   'R': self.RookMoves,
                               'B': self.BishopMoves, 'N': self.KnightMoves,
@@ -40,51 +42,23 @@ class GameState():
                     self.board[Move.EndRow+1][Move.EndCol] = "--"
                 elif Move.PieceMoved == 'B_P':
                     self.board[Move.EndRow-1][Move.EndCol] = "--"
-        self.board[Move.StartRow][Move.StartCol] = "--"                     # set the start square to empty 
-        self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved              # set the final square to the moved piece
-        self.MoveLog.append(Move)                                           # add move to the log
-        self.Turn = 'B' if self.Turn == 'W' else 'W'                        # update turn ('W' or 'B') 
-        # update king locations, this is later used within 
-        # CheckAttackedSquare function to check if kings are
-        # attacked after a move  
-        if Move.PieceMoved == 'W_K':
-            self.WhiteKingLocation = (Move.EndRow,Move.EndCol)
-            # check if the move of king was within a castle move
-            # if so move the rook as well
-            # ActualMove Flag is introduced to distinguish between trial moves
-            # and trial moves (moves tried to see if they are legal). If it is 
-            # a trial move, castling status is NOT updated and rook is not moved
-            if ActualMove:
-                # if the king has moved, castling is not allowed anymore
-                self.WhiteCanCastle = False
-                if Move.StartRow == 7 and Move.StartCol == 4 and \
-                    Move.EndRow == 7 and Move.EndCol == 6:
-                    self.board[7][7] = "--"
-                    self.board[7][5] = "W_R"      
-                    Move.CastleMove  = True
-                if Move.StartRow == 7 and Move.StartCol == 4 and \
-                    Move.EndRow == 7 and Move.EndCol == 2:
-                    self.board[7][0] = "--"
-                    self.board[7][3] = "W_R"        
-                    Move.CastleMove  = True             
-        elif Move.PieceMoved == 'B_K':
-            # if the king has moved, castling is not allowed anymore
-            self.BlackKingLocation = (Move.EndRow,Move.EndCol)       
-            if ActualMove:
-                self.BlackCanCastle = False
-                if Move.StartRow == 0 and Move.StartCol == 4 and \
-                    Move.EndRow == 0 and Move.EndCol == 6:
-                    self.board[0][7]    = "--"
-                    self.board[0][5]    = "B_R"      
-                    Move.CastleMove = True  
-                if Move.StartRow == 0 and Move.StartCol == 4 and \
-                    Move.EndRow == 0 and Move.EndCol == 2:
-                    self.board[0][0]    = "--"
-                    self.board[0][3]    = "B_R"      
-                    Move.CastleMove = True  
+        # set the start square to empty 
+        self.board[Move.StartRow][Move.StartCol] = "--"       
+        # set the final square to the moved piece              
+        self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved     
+         # add move to the log         
+        self.MoveLog.append(Move)        
+        # update turn ('W' or 'B')                                   
+        self.Turn = 'B' if self.Turn == 'W' else 'W'
+        # update castling rights                      
+        self.UpdateCastlingRights(Move,ActualMove)
         # pawn promotion
         if Move.PawnPromotion:
             self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved[0] + '_Q'    # change promoted pawn to queen
+        
+        
+        
+        
         
     # ---------------------------------------------------- #
     #                  UndoMove function                   #
@@ -120,9 +94,9 @@ class GameState():
                     if PieceColor == self.Turn:
                         self.MoveFunctions[Piece](PieceColor,row,col,AllPossibleMoves)
         # check castle moves 
-        if self.WhiteCanCastle:
+        if self.WhiteCanCastleKingSide or self.WhiteCanCastleQueenSide:
             self.CastleMove('W',AllPossibleMoves)
-        if self.BlackCanCastle:
+        if self.BlackCanCastleKingSide or self.BlackCanCastleQueenSide:
             self.CastleMove('B',AllPossibleMoves)
         return AllPossibleMoves
     
@@ -178,15 +152,15 @@ class GameState():
             # get white king position
             PieceRow = self.WhiteKingLocation[0]
             PieceCol = self.WhiteKingLocation[1]
-            # check short castle if rook on the right has not moved
-            if self.board[7][7] == 'W_R':    # check the piece on h8 square is white rook
-                if self.board[7][6] == '--' and self.board[7][5] == '--': # check if square between rock-king are empty 
+            # check SHORT castle if rook on the right has not moved
+            if self.WhiteCanCastleKingSide:  
+                if self.board[7][6] == '--' and self.board[7][5] == '--': # check if squares between rock-king are empty 
                     CheckRow = 7
                     CheckCol = 6
                     self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllPossibleMoves) 
-            # check long castle if rook on the left has not moved
-            if self.board[7][0] == 'W_R':    # check the piece on h8 square is white rook  
-                if self.board[7][1] == '--' and self.board[7][2] == '--' and self.board[7][3] == '--': # check if square between rock-king are empty 
+            # check LONG castle if rook on the left has not moved
+            if self.WhiteCanCastleQueenSide:     
+                if self.board[7][1] == '--' and self.board[7][2] == '--' and self.board[7][3] == '--': # check if squares between rock-king are empty 
                     CheckRow = 7
                     CheckCol = 2
                     self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllPossibleMoves)        
@@ -196,17 +170,76 @@ class GameState():
             PieceRow = self.BlackKingLocation[0]
             PieceCol = self.BlackKingLocation[1]
             # check short castle if rook on the right has not moved
-            if self.board[0][7] == 'B_R':    # check the piece on h1 square is black rook
+            if self.BlackCanCastleKingSide:
                 if self.board[0][6] == '--' and self.board[0][5] == '--': # check if square between rock-king are empty 
                     CheckRow = 0
                     CheckCol = 6
                     self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllPossibleMoves) 
             # check long castle if rook on the left has not moved
-            if self.board[0][0] == 'B_R':    # check the piece on h8 square is black rook  
+            if self.BlackCanCastleQueenSide:
                 if self.board[0][1] == '--' and self.board[0][2] == '--' and self.board[0][3] == '--': # check if square between rock-king are empty 
                     CheckRow = 0
                     CheckCol = 2
                     self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllPossibleMoves)  
+ 
+ 
+    # ---------------------------------------------------- #
+    #          Update Castling Rights function             #
+    # ---------------------------------------------------- #
+    
+    def UpdateCastlingRights(self,Move,ActualMove):
+        # update king locations, this is later used within 
+        # CheckAttackedSquare function to check if kings are
+        # attacked after a move  
+        if Move.PieceMoved == 'W_K':
+            self.WhiteKingLocation = (Move.EndRow,Move.EndCol)
+            # check if the move of king was within a castle move
+            # if so move the rook as well
+            # ActualMove Flag is introduced to distinguish between trial moves
+            # and trial moves (moves tried to see if they are legal). If it is 
+            # a trial move, castling status is NOT updated and rook is not moved
+            if ActualMove:
+                # if the king has moved, castling is not allowed anymore
+                self.WhiteCanCastleKingSide  = False
+                self.WhiteCanCastleQueenSide = False
+                if Move.StartRow == 7 and Move.StartCol == 4 and \
+                    Move.EndRow == 7 and Move.EndCol == 6:
+                    self.board[7][7] = "--"
+                    self.board[7][5] = "W_R"      
+                    Move.CastleMove  = True
+                if Move.StartRow == 7 and Move.StartCol == 4 and \
+                    Move.EndRow == 7 and Move.EndCol == 2:
+                    self.board[7][0] = "--"
+                    self.board[7][3] = "W_R"        
+                    Move.CastleMove  = True             
+        elif Move.PieceMoved == 'B_K':
+            # if the king has moved, castling is not allowed anymore
+            self.BlackKingLocation = (Move.EndRow,Move.EndCol)       
+            if ActualMove:
+                self.BlackCanCastleKingSide  = False    
+                self.BlackCanCastleQueenSide = False  
+                if Move.StartRow == 0 and Move.StartCol == 4 and \
+                    Move.EndRow == 0 and Move.EndCol == 6:
+                    self.board[0][7]    = "--"
+                    self.board[0][5]    = "B_R"      
+                    Move.CastleMove = True  
+                if Move.StartRow == 0 and Move.StartCol == 4 and \
+                    Move.EndRow == 0 and Move.EndCol == 2:
+                    self.board[0][0]    = "--"
+                    self.board[0][3]    = "B_R"      
+                    Move.CastleMove = True  
+        # if it is a actualmove and rook has moved, then castling
+        # on that side is not allowed anymore
+        if ActualMove and Move.PieceMoved == 'W_R':
+            if Move.StartCol == 7:
+                self.WhiteCanCastleKingSide = False
+            elif Move.StartCol == 0:
+                self.WhiteCanCastleQueenSide = False
+        elif ActualMove and Move.PieceMoved == 'B_R':
+            if Move.StartCol == 7:
+                self.BlackCanCastleKingSide = False
+            elif Move.StartCol == 0:
+                self.BlackCanCastleQueenSide = False
     
     # ---------------------------------------------------- #
     #      check the target square function                #
