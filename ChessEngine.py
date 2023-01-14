@@ -33,6 +33,13 @@ class GameState():
     # ---------------------------------------------------- #
     
     def MakeMove(self,Move,ActualMove):
+        # enpassant move
+        if ActualMove and abs(Move.StartCol - Move.EndCol) == 1:
+            if self.board[Move.EndRow][Move.EndCol] == "--":
+                if Move.PieceMoved == 'W_P':
+                    self.board[Move.EndRow+1][Move.EndCol] = "--"
+                elif Move.PieceMoved == 'B_P':
+                    self.board[Move.EndRow-1][Move.EndCol] = "--"
         self.board[Move.StartRow][Move.StartCol] = "--"                     # set the start square to empty 
         self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved              # set the final square to the moved piece
         self.MoveLog.append(Move)                                           # add move to the log
@@ -48,32 +55,32 @@ class GameState():
             # and trial moves (moves tried to see if they are legal). If it is 
             # a trial move, castling status is NOT updated and rook is not moved
             if ActualMove:
+                # if the king has moved, castling is not allowed anymore
+                self.WhiteCanCastle = False
                 if Move.StartRow == 7 and Move.StartCol == 4 and \
                     Move.EndRow == 7 and Move.EndCol == 6:
-                    self.board[7][7]    = "--"
-                    self.board[7][5]    = "W_R"      
-                    self.WhiteCanCastle = False
-                    Move.CastleMove = True
+                    self.board[7][7] = "--"
+                    self.board[7][5] = "W_R"      
+                    Move.CastleMove  = True
                 if Move.StartRow == 7 and Move.StartCol == 4 and \
                     Move.EndRow == 7 and Move.EndCol == 2:
-                    self.board[7][0]    = "--"
-                    self.board[7][3]    = "W_R"      
-                    self.WhiteCanCastle = False      
-                    Move.CastleMove = True             
+                    self.board[7][0] = "--"
+                    self.board[7][3] = "W_R"        
+                    Move.CastleMove  = True             
         elif Move.PieceMoved == 'B_K':
+            # if the king has moved, castling is not allowed anymore
             self.BlackKingLocation = (Move.EndRow,Move.EndCol)       
             if ActualMove:
+                self.BlackCanCastle = False
                 if Move.StartRow == 0 and Move.StartCol == 4 and \
                     Move.EndRow == 0 and Move.EndCol == 6:
                     self.board[0][7]    = "--"
                     self.board[0][5]    = "B_R"      
-                    self.BlackCanCastle = False
                     Move.CastleMove = True  
                 if Move.StartRow == 0 and Move.StartCol == 4 and \
                     Move.EndRow == 0 and Move.EndCol == 2:
                     self.board[0][0]    = "--"
                     self.board[0][3]    = "B_R"      
-                    self.BlackCanCastle = False  
                     Move.CastleMove = True  
         # pawn promotion
         if Move.PawnPromotion:
@@ -219,6 +226,7 @@ class GameState():
     # ---------------------------------------------------- #
   
     def CheckSquare(self,PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves):
+        
         # this flag is used to break the loop within the move functions
         BreakFlag = False
         MovingPiece = self.board[PieceRow][PieceCol]
@@ -234,6 +242,33 @@ class GameState():
             # set flag to true to finish the loop in move function    
             BreakFlag = True
         return BreakFlag
+    
+    # ---------------------------------------------------- #
+    #      check enpassant move function                   #
+    # ---------------------------------------------------- #
+    
+    def CheckEnpassant(self,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves):
+        # check capturing piece: ENPASSANT        
+        if (self.Turn == 'W' and len(self.MoveLog) > 0 and self.MoveLog[-1].PieceMoved == 'B_P'):
+            if (self.MoveLog[-1].StartRow == 1 and self.MoveLog[-1].EndRow == 3):
+                if (PieceRow == 3 and self.MoveLog[-1].StartCol == PieceCol - 1):
+                    CheckCol = PieceCol - 1
+                    CheckRow = PieceRow - 1
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board)) 
+                elif (PieceRow == 3 and self.MoveLog[-1].StartCol == PieceCol + 1):
+                    CheckCol = PieceCol + 1
+                    CheckRow = PieceRow - 1
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))                  
+        elif (self.Turn == 'B' and len(self.MoveLog) > 0 and self.MoveLog[-1].PieceMoved == 'W_P'):
+            if (self.MoveLog[-1].StartRow == 6 and self.MoveLog[-1].EndRow == 4):
+                if (PieceRow == 4 and self.MoveLog[-1].StartCol == PieceCol - 1):
+                    CheckCol = PieceCol - 1
+                    CheckRow = PieceRow + 1
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board)) 
+                elif (PieceRow == 4 and self.MoveLog[-1].StartCol == PieceCol + 1):
+                    CheckCol = PieceCol + 1
+                    CheckRow = PieceRow + 1
+                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))          
     
     # ---------------------------------------------------- #
     #      Calculate Moves for each piece                  #
@@ -278,31 +313,8 @@ class GameState():
                 # if target square is not empty & piece is opposite color
                 if (TargetPieceColor != '-') and (PieceColor != TargetPieceColor):
                     AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))
-        # check capturing piece: ENPASSANT        
-        if (self.Turn == 'W' and len(self.MoveLog) > 0 and self.MoveLog[-1].PieceMoved == 'B_P'):
-            if (self.MoveLog[-1].StartRow == 1 and self.MoveLog[-1].EndRow == 3):
-                if (PieceRow == 3 and self.MoveLog[-1].StartCol == PieceCol - 1):
-                    CheckCol = PieceCol - 1
-                    CheckRow = PieceRow - 1
-                    TargetSquare = self.board[CheckRow][CheckCol]
-                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board)) 
-                elif (PieceRow == 3 and self.MoveLog[-1].StartCol == PieceCol + 1):
-                    CheckCol = PieceCol + 1
-                    CheckRow = PieceRow - 1
-                    TargetSquare = self.board[CheckRow][CheckCol]
-                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))                  
-        elif (self.Turn == 'B' and len(self.MoveLog) > 0 and self.MoveLog[-1].PieceMoved == 'W_P'):
-            if (self.MoveLog[-1].StartRow == 6 and self.MoveLog[-1].EndRow == 4):
-                if (PieceRow == 4 and self.MoveLog[-1].StartCol == PieceCol - 1):
-                    CheckCol = PieceCol - 1
-                    CheckRow = PieceRow + 1
-                    TargetSquare = self.board[CheckRow][CheckCol]
-                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board)) 
-                elif (PieceRow == 4 and self.MoveLog[-1].StartCol == PieceCol + 1):
-                    CheckCol = PieceCol + 1
-                    CheckRow = PieceRow + 1
-                    TargetSquare = self.board[CheckRow][CheckCol]
-                    AllValidMoves.append(Move((PieceRow,PieceCol),(CheckRow,CheckCol),self.board))   
+        # check capturing piece: ENPASSANT
+        self.CheckEnpassant(PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
             
     def KingMoves(self,PieceColor,PieceRow,PieceCol,AllValidMoves):
         Directions = [-1,1]   
@@ -403,22 +415,23 @@ class Move():
                    'e':4, 'f':5, 'g':6, 'h':7}
     colsToFiles = {v: k for k, v in filesToCols.items()}
 
-    def __init__(self, StartSq, EndSq, board):
+    def __init__(self,StartSquare,EndSquare,board):
         # get initial position 
-        self.StartRow      = StartSq[0]
-        self.StartCol      = StartSq[1]
+        self.StartRow      = StartSquare[0]
+        self.StartCol      = StartSquare[1]
         #  get final position 
-        self.EndRow        = EndSq[0]
-        self.EndCol        = EndSq[1]
+        self.EndRow        = EndSquare[0]
+        self.EndCol        = EndSquare[1]
         # get moved & captured info 
         self.PieceMoved        = board[self.StartRow][self.StartCol]
         self.PieceCaptured     = board[self.EndRow][self.EndCol]
         self.PieceCapturedFlag = self.PieceCaptured != '--'
         # calculate move ID 
         self.moveID = self.StartRow * 1000 + self.StartCol * 100 + self.EndRow * 10 + self.EndCol
-        #  calculate move ID 
+        # check if move was pawn promotion move 
         self.PawnPromotion = (self.PieceMoved == 'W_P' and self.EndRow == 0) or \
                              (self.PieceMoved == 'B_P' and self.EndRow == 7)
+        # castle move is set to False here by default                     
         self.CastleMove = False
     # implement comparison method for this class    
     # note that this method is necessary to compare the objects of this class
