@@ -97,6 +97,7 @@ def RunTheGame():
                             GameState.MakeMove(SelectedMove,True)     # if so, make the move
                             ClickedSquares = []                       # set clicked squares back to empty
                             MoveMade = True                           # set flag
+                            break
                     if not MoveMade:                                 # if not a legal move
                         ClickedSquares = [SelectedSquare]            # then ignore last clicked (2nd square)
                 # --------- draw/update board --------- #      
