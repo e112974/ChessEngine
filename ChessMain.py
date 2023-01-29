@@ -5,6 +5,7 @@ import Players
 from Utilities import *
 from pygame._sdl2.video import Window
 from MenuAndButtons import *
+from AutoPlay import *
 
 # ----------------- set board dimensions ----------------- #
 BoardWidth = BoardHeight = 800
@@ -45,6 +46,13 @@ def RunTheGame():
     MoveLogFont = pygame.font.SysFont('Arial',24,False,False)
     # ----------------- create gamestate ----------------- #
     GameState = ChessEngine.GameState()
+    # ---------- create players -------------------- #
+    Player1 = Players.Player
+    Player1.Type = 'Human'
+    Player1.Color = 'W'
+    Player2 = Players.Player
+    Player2.Type = 'PC'
+    Player2.Color = 'B'   
     # ---------- initialize variables -------------------- #
     RunningFlag    = True
     GameOver       = False
@@ -68,6 +76,9 @@ def RunTheGame():
                 RunningFlag = False         # set flag
                 # --------- draw/update board --------- #    
                 DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont) 
+            elif Player1.Type == 'PC' or Player2.Type == 'PC':
+                # score the board
+                Score = ScoreBoard(GameState)
             # --------- MOUSE CLICKED --------- #
             elif Event.type == pygame.MOUSEBUTTONDOWN:     # if user clicks on the board
                 ClickLocation = pygame.mouse.get_pos()     # get click coords

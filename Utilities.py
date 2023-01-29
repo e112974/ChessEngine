@@ -84,14 +84,20 @@ def ShowGameEndText(screen,text):
 # -------------------------------------------------------- #
     
 def DisplayMoveLog(screen,GameState,font):
+    # position & size of log box
     MoveLogRect = pygame.Rect(BoardWidth,0,MoveLogPanelWidth,MoveLogPanelHeight)
+    # create box to write the log
     pygame.draw.rect(screen,pygame.Color('black'),MoveLogRect)
+    # recover the log so far
     MoveLog = GameState.MoveLog
+    # initialize move texts
     MoveTexts = []
+    # loop over log
     for i in range(0,len(MoveLog),2):
+        # 
         moveString = str(i//2 + 1) + '.' + ChessEngine.Move.ChessNotation(MoveLog[i]) + ' '
-        #if i+1 < len(MoveLog):  # make sure black made a move
-            #moveString += str(MoveLog[i+1])
+        if i+1 < len(MoveLog):  # make sure black made a move
+            moveString += ChessEngine.Move.ChessNotation(MoveLog[i+1])
         MoveTexts.append(moveString)
     movesPerRow = 3
     padding = 5

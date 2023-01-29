@@ -1,3 +1,5 @@
+from AutoPlay import *
+
 # -------------------------------------------------------- #
 #                      GameState class                     #
 # -------------------------------------------------------- #
@@ -55,10 +57,6 @@ class GameState():
         # pawn promotion
         if Move.PawnPromotion:
             self.board[Move.EndRow][Move.EndCol] = Move.PieceMoved[0] + '_Q'    # change promoted pawn to queen
-        
-        
-        
-        
         
     # ---------------------------------------------------- #
     #                  UndoMove function                   #
@@ -181,7 +179,6 @@ class GameState():
                     CheckRow = 0
                     CheckCol = 2
                     self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllPossibleMoves)  
- 
  
     # ---------------------------------------------------- #
     #          Update Castling Rights function             #
