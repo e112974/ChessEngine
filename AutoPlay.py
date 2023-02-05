@@ -1,4 +1,5 @@
 # -------------------- import modules -------------------- #
+from ChessEngine import *
 
 # ---------------------------------------------------- #
 #                  Points for Each Piece               #
@@ -72,21 +73,73 @@ PiecePositionPoints = {'N': KnightPoints,'R': RookPoints, 'Q': QueenPoints, 'B':
                        'B_P': BlackPawnPoints, 'W_P': WhitePawnPoints}
 
 # ---------------------------------------------------- #
-#          Initialize Checkmate score                  #
+#          Initialize Checkmate & Stalemate scores     #
 # ---------------------------------------------------- #
 
 CheckMate = 1000
 StaleMate = 0.0
-Depth     = 5
+
+# ---------------------------------------------------- #
+#          Set Depth of Auto Play                      #
+# ---------------------------------------------------- #
+
+Depth = 5
+
+# ---------------------------------------------------- #
+#          CalculateBestMove Function                  #
+# ---------------------------------------------------- #
 
 def CalculateBestMove(GameState):
-    # calculate board score
-    Score = ScoreBoard(GameState)
+    # calculate all valid moves
+    AllValidMoves = GameState.CalculateAllValidMoves()
+    # set flag
+    ActualMoveFlag = False
+    # initialize best score
+    BestScore = -CheckMate if GameState.Turn == 'W' else CheckMate
+    # try every valid move
+    for move in AllValidMoves:
+        # try the move
+        GameState.MakeMove(move,ActualMoveFlag)  
+        # calculate all counter-valid moves
+        AllValidMoves = GameState.CalculateAllValidMoves()
+        # initialize best counter score
+        BestCounterScore = -CheckMate if GameState.Turn == 'W' else CheckMate
+        # try every valid counter move
+        for CounterMove in AllValidMoves:
+            # try the move
+            GameState.MakeMove(CounterMove,ActualMoveFlag)  
+            # calculate board score
+            CounterScore = ScoreBoard(GameState)
+            # if a better move is found than the current best one, 
+            # then replace the best move
+            if (GameState.Turn == 'W' and CounterScore < BestCounterScore) \
+                or (GameState.Turn == 'B' and CounterScore > BestCounterScore):
+                BestCounterScore = CounterScore
+                BestCounterMove  = CounterMove
+            # unde move
+            GameState.UndoMove()    
+        # tmake best counter move
+        GameState.MakeMove(BestCounterMove,ActualMoveFlag)      
+        # calculate board score
+        Score = ScoreBoard(GameState)
+        # if a better move is found than the current best one, 
+        # then replace the best move
+        if (GameState.Turn == 'W' and Score > BestScore) \
+            or (GameState.Turn == 'B' and Score < BestScore):
+            BestScore = Score
+            BestMove = move
+        # unde move    
+        GameState.UndoMove()    
+        GameState.UndoMove()   
+    # return Best Move
+    return BestMove
 
 # ---------------------------------------------------- #
 #                  ScoreBoard function                 #
 # ---------------------------------------------------- #
 # 
+# Score is calculated based on the position of the piece and/or
+# the value of capture piece
 # Note: A POSITIVE score is good for WHITE and a NEGATIVE score is good for BLACK
 def ScoreBoard(GameState):
     # check if checkmate or stalemate is reached
@@ -116,7 +169,8 @@ def ScoreBoard(GameState):
                         PiecePositionScore = PiecePositionPoints[Square][row][col]
                     else:
                         PiecePositionScore = PiecePositionPoints[Square[2]][row][col]
-                # check color of piece
+                # calculate the total score 
+                # total score = position score + value of any captured piece
                 if Square[0] == 'W':
                     Score += PiecePoints[Square[2]] + PiecePositionScore * 0.1
                 elif Square[0] == 'B':

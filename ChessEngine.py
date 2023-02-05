@@ -311,15 +311,16 @@ class GameState():
         CheckCol = PieceCol     
         # if first move of pawn, then they can jump double, this is assigned
         # by calling the function twice and incrementing the row in between the calls
+        # note that for this move to be possible the square in front of the pawn needs to be empty
         if (self.Turn == 'W' and PieceRow == 6) or (self.Turn == 'B' and PieceRow == 1):
             CheckRow = PieceRow + Direction
             TargetSquare = self.board[CheckRow][CheckCol]
             if (TargetSquare == '--'):
                 self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)
-            CheckRow = CheckRow + Direction
-            TargetSquare = self.board[CheckRow][CheckCol]
-            if (TargetSquare == '--'):
-                self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)     
+                CheckRow = CheckRow + Direction
+                TargetSquare = self.board[CheckRow][CheckCol]
+                if (TargetSquare == '--'):
+                    self.CheckSquare(PieceColor,PieceRow,PieceCol,CheckRow,CheckCol,AllValidMoves)     
         else:
             CheckRow = PieceRow + Direction
             TargetSquare = self.board[CheckRow][CheckCol]

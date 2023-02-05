@@ -76,9 +76,16 @@ def RunTheGame():
                 RunningFlag = False         # set flag
                 # --------- draw/update board --------- #    
                 DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont) 
-            elif Player1.Type == 'PC' or Player2.Type == 'PC':
-                # score the board
-                Score = ScoreBoard(GameState)
+            elif (Player1.Type == 'PC' and GameState.Turn == Player1.Color) \
+                or (Player2.Type == 'PC' and GameState.Turn == Player2.Color) :
+                # calculate best move
+                BestMove = CalculateBestMove(GameState)
+                # make the move
+                GameState.MakeMove(BestMove,True)       
+                ClickedSquares = []                     
+                MoveMade = True  
+                # --------- draw/update board --------- #      
+                DrawGameState(Screen,GameState,AllValidMoves,SelectedSquare,MoveLogFont) 
             # --------- MOUSE CLICKED --------- #
             elif Event.type == pygame.MOUSEBUTTONDOWN:     # if user clicks on the board
                 ClickLocation = pygame.mouse.get_pos()     # get click coords
